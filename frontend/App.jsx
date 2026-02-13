@@ -1,16 +1,17 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './Home';
+import Login from './Login';
+import React from 'react';
 
 function App() {
   return (
     <div>
         <h1>Welcome to Date Nite!</h1>
         <Router>
-        <Routes>
-            <Route path="/" element={<Home />} />
-            {/* <Route path="/about" element={<About />} /> */}
-            {/* Add more routes as needed */}
-        </Routes>
+          <Routes>
+              <Route path="/" element={<Login />} />
+              {/* <Route path="/about" element={<About />} /> */}
+              {/* Add more routes as needed */}
+          </Routes>
         </Router>
     </div>
 
