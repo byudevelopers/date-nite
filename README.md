@@ -1,4 +1,4 @@
-# Date Nite
+# Date Nite 🗓️
 
 Date Nite is a community-driven date idea rating application designed to help university students discover high-quality date ideas. The platform enables users to submit both at-home and local venue date ideas, rate their experiences, and browse community-recommended dates to keep their dating life fresh and exciting.
 
