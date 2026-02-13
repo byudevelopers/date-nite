@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './Home';
+import Login from './Login';
 
 function App() {
   return (
@@ -7,7 +7,7 @@ function App() {
         <h1>Welcome to Date Nite!</h1>
         <Router>
         <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Login />} />
             {/* <Route path="/about" element={<About />} /> */}
             {/* Add more routes as needed */}
         </Routes>
