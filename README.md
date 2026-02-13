@@ -83,6 +83,119 @@ npm install
 npm run dev
 ```
 
+## Repository Layout
+
+This is the industry standard for page file organization. We will need to make some file modifications to adhere to this idea.
+
+```
+date-nite/
+│
+├── client/                        # Frontend React application
+│   ├── public/
+│   │   ├── index.html
+│   │   └── assets/
+│   │       ├── images/
+│   │       └── icons/
+│   ├── src/
+│   │   ├── components/           # Reusable UI components
+│   │   │   ├── common/           # Shared components (Button, Input, etc.)
+│   │   │   ├── DateCard.tsx
+│   │   │   ├── RatingButton.tsx
+│   │   │   └── Header.tsx
+│   │   ├── pages/                # Page-level components
+│   │   │   ├── Login.tsx
+│   │   │   ├── Home.tsx
+│   │   │   ├── DateSubmission.tsx
+│   │   │   ├── ReviewPage.tsx
+│   │   │   └── Favorites.tsx
+│   │   ├── context/              # React context for state management
+│   │   │   └── AuthContext.tsx
+│   │   ├── hooks/                # Custom React hooks
+│   │   │   └── useAuth.ts
+│   │   ├── services/             # API integration layer
+│   │   │   ├── api.ts            # Axios configuration
+│   │   │   ├── authService.ts
+│   │   │   └── dateService.ts
+│   │   ├── styles/               # CSS/styling files
+│   │   │   ├── globals.css
+│   │   │   └── components/
+│   │   ├── utils/                # Utility functions
+│   │   │   └── helpers.ts
+│   │   ├── types/                # Frontend-specific TypeScript types
+│   │   │   └── index.ts
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
+│
+├── server/                       # Backend Express application
+│   ├── src/
+│   │   ├── config/               # Configuration files
+│   │   │   ├── database.ts
+│   │   │   └── env.ts
+│   │   ├── controllers/          # Request handlers
+│   │   │   ├── authController.ts
+│   │   │   ├── userController.ts
+│   │   │   ├── dateController.ts
+│   │   │   └── ratingController.ts
+│   │   ├── middleware/           # Express middleware
+│   │   │   ├── auth.ts
+│   │   │   ├── errorHandler.ts
+│   │   │   └── validation.ts
+│   │   ├── models/               # Database models/schemas
+│   │   │   ├── User.ts
+│   │   │   ├── DateIdea.ts
+│   │   │   └── Rating.ts
+│   │   ├── routes/               # API route definitions
+│   │   │   ├── index.ts          # Route aggregator
+│   │   │   ├── authRoutes.ts
+│   │   │   ├── userRoutes.ts
+│   │   │   ├── dateRoutes.ts
+│   │   │   └── ratingRoutes.ts
+│   │   ├── services/             # Business logic layer
+│   │   │   ├── authService.ts
+│   │   │   ├── userService.ts
+│   │   │   ├── dateService.ts
+│   │   │   └── ratingService.ts
+│   │   ├── utils/                # Utility functions
+│   │   │   ├── logger.ts
+│   │   │   └── validators.ts
+│   │   ├── types/                # Backend-specific TypeScript types
+│   │   │   └── index.ts
+│   │   ├── app.ts                # Express app configuration
+│   │   └── server.ts             # Server entry point
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── .env.example
+│
+├── shared/                        # Shared code between frontend and backend
+│   ├── src/
+│   │   ├── types/                # Shared TypeScript interfaces
+│   │   │   ├── User.ts
+│   │   │   ├── DateIdea.ts
+│   │   │   ├── Rating.ts
+│   │   │   └── index.ts
+│   │   ├── constants/            # Shared constants
+│   │   │   └── index.ts
+│   │   └── utils/                # Shared utility functions
+│   │       └── validation.ts
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml                # CI/CD pipeline
+│
+├── node_modules/
+├── package.json                   # Root package.json with workspaces
+├── tsconfig.json                  # Base TypeScript config
+├── .eslintrc.json                 # Linting configuration
+├── .prettierrc                    # Code formatting rules
+├── .gitignore
+└── README.md
+```
+
 ## API Documentation
 
 API documentation will be added as endpoints are developed.
