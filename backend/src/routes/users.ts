@@ -9,11 +9,18 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "email and password required" });
   }
   try {
-    const result = await registerUserService({ email, password, favorites, username });
+    const result = await registerUserService({
+      email,
+      password,
+      favorites,
+      username,
+    });
     res.status(201).json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to register user" });
   }
 });
+
+//TODO: add endpoints for logout, login
 
 export default router;
