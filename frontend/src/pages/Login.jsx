@@ -1,15 +1,7 @@
-import React from 'react';
+//css statement goes here
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
 
 function Login() {
-
-  const navigate = useNavigate();
-
-  const handleLogin = () => {
-    navigate('/Home');
-  }
-
   return (
     <div>
       <h1>Login to Date-Nite</h1>
@@ -23,14 +15,17 @@ function Login() {
           </div>
         </form>
         <div className="controlBtns">
-          <button className="submitBtn" type="submit" onClick={handleLogin}>Submit</button>
+          <button className="submitBtn" type="submit">Submit</button>
           <button className="createAccountBtn" type="submit">Create Account</button>
         </div>
       </div>
+
+
     </div>
   );
 }
 
+//After login the user goes here
 
 
 
