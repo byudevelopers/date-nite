@@ -1,16 +1,19 @@
 import { Router } from "express";
+import { registerUserService } from "../services/userService";
 const router = Router();
 
-// Create user endpoint
-router.post("/", (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ error: "Username and password required" });
+// Register user endpoint
+router.post("/", async (req, res) => {
+  const { email, password, favorites, username } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: "email and password required" });
   }
-  // Stub: pretend to create user and return a fake JWT
-  // In real implementation, save user to DB and generate JWT
-  const fakeJwt = "stub.jwt.token";
-  res.status(201).json({ username, token: fakeJwt });
+  try {
+    const result = await registerUserService({ email, password, favorites, username });
+    res.status(201).json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to register user" });
+  }
 });
 
 export default router;
