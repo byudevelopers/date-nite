@@ -1,9 +1,12 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Login from './Login';
-import Home from './Home';
+import Login from './pages/Login';
+import Home from './pages/Home';
 import React from 'react';
 
+//login, home (search with filter), add date, my stuff/favorites, date details, add review
+
 function App() {
+
   return (
     <div>
         <h1>Welcome to Date Nite!</h1>

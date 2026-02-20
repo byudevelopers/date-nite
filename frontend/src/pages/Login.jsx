@@ -7,7 +7,7 @@ function Login() {
   const navigate = useNavigate();
 
   const handleLogin = () => {
-    navigate('');
+    navigate('/Home');
   }
 
   return (
@@ -23,12 +23,10 @@ function Login() {
           </div>
         </form>
         <div className="controlBtns">
-          <button className="submitBtn" type="submit">Submit</button>
+          <button className="submitBtn" type="submit" onClick={handleLogin}>Submit</button>
           <button className="createAccountBtn" type="submit">Create Account</button>
         </div>
       </div>
-
-
     </div>
   );
 }
