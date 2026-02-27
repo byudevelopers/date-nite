@@ -8,3 +8,12 @@
 .page-content {
     padding: 1rem;
 }
+
+main {
+    flex: 1 calc(100vh - 110px);
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+}
