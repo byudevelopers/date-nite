@@ -4,6 +4,7 @@
 /dist
 /build
 /.env
+/backend/.env
 /.vscode
 /.idea
 *.log
