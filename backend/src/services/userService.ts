@@ -4,7 +4,6 @@ import { supabase, createUser } from "../database";
 export async function registerUserService({
   email,
   password,
-  favorites = [],
   username,
 }: {
   email: string;
@@ -23,7 +22,7 @@ export async function registerUserService({
   const userId = authData.user?.id;
   if (!userId) throw new Error("User registration failed: No user id returned");
   // Create user profile row
-  const profile = await createUser({ id: userId, email, favorites });
+  const profile = await createUser({ id: userId, email });
   return { auth: authData, profile };
 }
 
