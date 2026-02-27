@@ -47,6 +47,16 @@ export async function deleteUser(id: string) {
   return data;
 }
 
+export async function getUserByEmail(email: string) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("email", email)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 // DATES CRUD
 export async function getDate(id: string) {
   const { data, error } = await supabase
