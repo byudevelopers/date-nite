@@ -4,7 +4,6 @@ import { supabase, createUser } from "../database";
 export async function registerUserService({
   email,
   password,
-  favorites = [],
   username,
 }: {
   email: string;
@@ -23,6 +22,34 @@ export async function registerUserService({
   const userId = authData.user?.id;
   if (!userId) throw new Error("User registration failed: No user id returned");
   // Create user profile row
-  const profile = await createUser({ id: userId, email, favorites });
+  const profile = await createUser({ id: userId, email });
   return { auth: authData, profile };
 }
+
+// Logout user by clearing the session on the server side. 
+export async function loginUserService({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (error) throw error;
+  return data;            // the auth session object
+}
+
+export async function logoutUserService() {
+  // supabase.client keeps the current session internally,
+  // so you just tell it to sign out.  If you’re passing the
+  // access token yourself (e.g. via Authorization header) you
+  // can call supabase.auth.setAuth(token) first.
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+  return { success: true };
+}
+
+

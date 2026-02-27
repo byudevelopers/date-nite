@@ -1,9 +1,13 @@
+outline-imgs
+
+
 .DS_Store
 /node_modules
 /backend/node_modules
 /dist
 /build
 /.env
+/backend/.env
 /.vscode
 /.idea
 *.log
