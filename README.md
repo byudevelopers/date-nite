@@ -196,7 +196,7 @@ date-nite/
 └── README.md
 ```
 
-## API Documentation
+## API Documentation 
 
 API documentation will be added as endpoints are developed.
 
