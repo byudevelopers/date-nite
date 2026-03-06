@@ -38,3 +38,23 @@ async function apiFetch(endpoint, options = {}) {
 export async function checkHealth() {
   return apiFetch('/health');
 }
+
+/**
+ * Login user
+ */
+export async function loginUser(email, password) {
+  return apiFetch('/users/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+/**
+ * Register user
+ */
+export async function registerUser(email, password) {
+  return apiFetch('/users', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
