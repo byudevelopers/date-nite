@@ -9,15 +9,14 @@
 ## dates
 
 - id: uuid, primary key
-- type: text ('venue' or 'non-venue')
-- name: text
-- location: text
-- avg_cost: numeric
-- recommended_group: text
-- avg_rating: numeric
-- group_size: text
-- icon: text (url or path)
-- description: text
+- type: text, not null ('venue' or 'non-venue')
+- name: text, not null
+- google_place_id: text (Google Place ID for venue dates)
+- icon: text (auto-generated emoji)
+- description: text (from Google Places for venues)
+- avg_cost: numeric (calculated from user reviews)
+- avg_rating: numeric (calculated from user reviews)
+- recommended_group: text (calculated from review group_size field: single/double/triple+)
 
 ## ratings
 
