@@ -23,7 +23,7 @@ export async function createUser(user: {
   email: string;
   favorites?: string[];
 }) {
-  const { data, error } = await supabase.from("users").insert([user]).single();
+  const { data, error } = await supabase.from("users").insert([user]).select().single();
   if (error) throw error;
   return data;
 }
@@ -75,7 +75,7 @@ export async function getAllDates() {
 }
 
 export async function createDate(date: any) {
-  const { data, error } = await supabase.from("dates").insert([date]).single();
+  const { data, error } = await supabase.from("dates").insert([date]).select().single();
   if (error) throw error;
   return data;
 }

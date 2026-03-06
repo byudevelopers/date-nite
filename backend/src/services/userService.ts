@@ -1,23 +1,23 @@
-import { supabase, createUser } from "../database";
+import { mockAuth, createUser } from "../mockDatabase";  // Changed from database
 import { signToken } from "../utils/jwt";
 import type {
   RegisterUserDTO,
   RegisterResponseDTO,
 } from "@shared/user.types";
 
-// Register user with Supabase Auth, then create user profile row
+// Register user with mock auth
 export async function registerUserService(
   userData: RegisterUserDTO,
 ): Promise<RegisterResponseDTO> {
   const { email, password } = userData;
 
-  // Create Supabase Auth user
-  const { data: authData, error: authError } = await supabase.auth.signUp({
+  // Create auth user (replaces supabase.auth.signUp)
+  const { data: authData, error: authError } = await mockAuth.signUp({
     email,
     password,
   });
 
-  if (authError) throw authError;
+  if (authError) throw new Error(authError.message);
 
   const userId = authData.user?.id;
   if (!userId) {
@@ -37,13 +37,12 @@ export async function registerUserService(
     user: {
       id: userId,
       email: email,
-      favorites: profile.favorites || [],
     },
     accessToken,
   };
 }
 
-// Logout user by clearing the session on the server side. 
+// Login user
 export async function loginUserService({
   email,
   password,
@@ -51,22 +50,16 @@ export async function loginUserService({
   email: string;
   password: string;
 }) {
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await mockAuth.signInWithPassword({
     email,
     password,
   });
-  if (error) throw error;
-  return data;            // the auth session object
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 export async function logoutUserService() {
-  // supabase.client keeps the current session internally,
-  // so you just tell it to sign out.  If you’re passing the
-  // access token yourself (e.g. via Authorization header) you
-  // can call supabase.auth.setAuth(token) first.
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+  const { error } = await mockAuth.signOut();
+  if (error) throw new Error(error);
   return { success: true };
 }
-
-

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import React from 'react';
 import App from '../App';
+import { loginUser, registerUser } from '../services/api';
 
 function Login() {
   const navigate = useNavigate();
@@ -53,16 +54,30 @@ function Login() {
       <div className="formArea">
         <form method="get">
           <div className="emailInput input-group mb-3">
-            <input className="form-control" type="email" placeholder="Email" />
+            <input 
+              className="form-control" 
+              type="email" 
+              placeholder="Email"
+              value={email}                           // ← Connect to state
+              onChange={(e) => setEmail(e.target.value)}  // ← Update state on typing
+              required
+            />
           </div>
           <div className="passwordInput input-group mb-3">
-            <input className="form-control" type="password" placeholder="Password" />
+           <input 
+              className="form-control" 
+              type="password" 
+              placeholder="Password"
+              value={password}                        // ← Connect to state
+              onChange={(e) => setPassword(e.target.value)} // ← Update state on typing
+              required
+            />
           </div>
         </form>
         {error && <p className="error">{error}</p>}
         <div className="controlBtns">
-          <button className="submitBtn btn btn-primary" onClick={() => navigate('/home')}>Submit</button>
-          <button className="createAccountBtn btn" onClick={() => navigate('/home')}>Create Account</button>
+          <button className="submitBtn btn btn-primary" onClick={handleLogin}>Submit</button>
+          <button className="createAccountBtn btn" onClick={handleCreateAccount}>Create Account</button>
         </div>
       </div>
     </main>
