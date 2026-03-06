@@ -11,14 +11,3 @@ date-nite.db
 /backend/.env
 /.vscode
 /.idea
-*.log
-*.tmp
-*.bak
-*.swp
-*.swo
-*.zip
-*.tar.gz
-*.rar
-*.7z
-*.exe
-*.msi
