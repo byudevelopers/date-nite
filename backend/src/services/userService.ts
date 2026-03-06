@@ -1,42 +1,23 @@
-import { supabase, createUser } from "../database";
+import { createUser } from "../database";
 import { signToken } from "../utils/jwt";
-import type {
-  RegisterUserDTO,
-  RegisterResponseDTO,
-} from "@shared/user.types";
+import { randomUUID } from "crypto";
+import bcrypt from "bcryptjs";
+import type { RegisterUserDTO, RegisterResponseDTO } from "@shared/user.types";
 
-// Register user with Supabase Auth, then create user profile row
+// Register user with bcrypt password hashing and SQLite
 export async function registerUserService(
   userData: RegisterUserDTO,
 ): Promise<RegisterResponseDTO> {
   const { email, password } = userData;
-
-  // Create Supabase Auth user
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
-  if (authError) throw authError;
-
-  const userId = authData.user?.id;
-  if (!userId) {
-    throw new Error("User registration failed: No user id returned");
-  }
-
-  // Create user profile
-  const profile = await createUser({ id: userId, email });
-
-  // Generate JWT token
-  const accessToken = signToken({
-    userId: userId,
-    email: email,
-  });
-
+  const userId = randomUUID();
+  const password_hash = await bcrypt.hash(password, 10);
+  const profile = createUser({ id: userId, email, password_hash });
+  if (!profile) throw new Error("User registration failed");
+  const accessToken = signToken({ userId, email });
   return {
     user: {
       id: userId,
-      email: email,
+      email,
       favorites: profile.favorites || [],
     },
     accessToken,
