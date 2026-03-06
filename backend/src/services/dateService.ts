@@ -1,17 +1,17 @@
-import { supabase, getDate, getAllDates } from "../database";
+import { getDate, getAllDates } from "../database";
 
 // get date by id
-export async function fetchDateById(id: string) {
-  return await getDate(id);
+export function fetchDateById(id: string) {
+  return getDate(id);
 }
 
 // get all dates
-export async function fetchAllDates() {
-  return await getAllDates();
+export function fetchAllDates() {
+  return getAllDates();
 }
 
 // return all dates
-export async function getDateService() {
+export function getDateService() {
   const dates = fetchAllDates();
   return dates;
 }

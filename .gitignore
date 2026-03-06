@@ -1,5 +1,7 @@
 outline-imgs
 
+date-nite.db
+
 .DS_Store
 /node_modules
 /backend/node_modules

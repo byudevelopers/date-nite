@@ -1,65 +1,25 @@
-import { mockAuth, createUser } from "../mockDatabase";  // Changed from database
+import { createUser } from "../database";
 import { signToken } from "../utils/jwt";
-import type {
-  RegisterUserDTO,
-  RegisterResponseDTO,
-} from "@shared/user.types";
+import { randomUUID } from "crypto";
+import bcrypt from "bcryptjs";
+import type { RegisterUserDTO, RegisterResponseDTO } from "@shared/user.types";
 
-// Register user with mock auth
+// Register user with bcrypt password hashing and SQLite
 export async function registerUserService(
   userData: RegisterUserDTO,
 ): Promise<RegisterResponseDTO> {
   const { email, password } = userData;
-
-  // Create auth user (replaces supabase.auth.signUp)
-  const { data: authData, error: authError } = await mockAuth.signUp({
-    email,
-    password,
-  });
-
-  if (authError) throw new Error(authError.message);
-
-  const userId = authData.user?.id;
-  if (!userId) {
-    throw new Error("User registration failed: No user id returned");
-  }
-
-  // Create user profile
-  const profile = await createUser({ id: userId, email });
-
-  // Generate JWT token
-  const accessToken = signToken({
-    userId: userId,
-    email: email,
-  });
-
+  const userId = randomUUID();
+  const password_hash = await bcrypt.hash(password, 10);
+  const profile = createUser({ id: userId, email, password_hash });
+  if (!profile) throw new Error("User registration failed");
+  const accessToken = signToken({ userId, email });
   return {
     user: {
       id: userId,
-      email: email,
+      email,
+      favorites: profile.favorites || [],
     },
     accessToken,
   };
-}
-
-// Login user
-export async function loginUserService({
-  email,
-  password,
-}: {
-  email: string;
-  password: string;
-}) {
-  const { data, error } = await mockAuth.signInWithPassword({
-    email,
-    password,
-  });
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-export async function logoutUserService() {
-  const { error } = await mockAuth.signOut();
-  if (error) throw new Error(error);
-  return { success: true };
 }
