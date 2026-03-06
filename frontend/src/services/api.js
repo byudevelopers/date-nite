@@ -58,3 +58,10 @@ export async function registerUser(email, password) {
     body: JSON.stringify({ email, password }),
   });
 }
+
+/**
+ * Get all dates
+ */
+export async function getDates() {
+  return apiFetch('/dates');
+}
