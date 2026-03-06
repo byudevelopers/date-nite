@@ -1,55 +1,78 @@
 import { Router } from "express";
 import { registerUserService } from "../services/userService";
-import {
-  loginUserService,
-  logoutUserService,
-} from "../services/userService";
+import { loginService, logoutService } from "../services/authService";
+import { authenticateToken } from "../middleware/auth";
+import type { RegisterUserDTO } from "@shared/user.types";
+import type { LoginDTO } from "@shared/auth.types";
+
 const router = Router();
 
-// Register user endpoint
+// POST /users - Register
 router.post("/", async (req, res) => {
-  const { email, password, favorites, username } = req.body;
+  const { email, password } = req.body as RegisterUserDTO;
+
   if (!email || !password) {
-    return res.status(400).json({ error: "email and password required" });
-  }
-  try {
-    const result = await registerUserService({
-      email,
-      password,
-      favorites,
-      username,
+    return res.status(400).json({
+      error: "VALIDATION_ERROR",
+      message: "email and password required",
     });
+  }
+
+  try {
+    const result = await registerUserService({ email, password });
     res.status(201).json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || "Failed to register user" });
+    res.status(500).json({
+      error: "REGISTRATION_FAILED",
+      message: error.message || "Failed to register user",
+    });
   }
 });
 
-//TODO: add endpoints for logout, login
-// endpoints for logout 
+// POST /users/login - Login
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body as LoginDTO;
+
   if (!email || !password) {
-    return res.status(400).json({ error: "email and password required" });
+    return res.status(400).json({
+      error: "VALIDATION_ERROR",
+      message: "email and password required",
+    });
   }
+
   try {
-    const auth = await loginUserService({ email, password });
-    res.status(200).json({ auth });
-  } catch (err: any) {
-    res.status(401).json({ error: err.message || "invalid credentials" });
+    const result = await loginService({ email, password });
+    res.status(200).json(result);
+  } catch (error: any) {
+    if (error.message === "INVALID_CREDENTIALS") {
+      return res.status(401).json({
+        error: "INVALID_CREDENTIALS",
+        message: "Invalid email or password",
+      });
+    }
+    res.status(500).json({
+      error: "LOGIN_FAILED",
+      message: "Login failed",
+    });
   }
 });
 
-router.post("/logout", async (req, res) => {
+// POST /users/logout - Logout (requires auth)
+router.post("/logout", authenticateToken, async (req, res) => {
   try {
-    await logoutUserService();
-    // if you’re using a cookie, clear it here:
-    // res.clearCookie("sb-access-token");
-    res.status(200).json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || "logout failed" });
+    const result = await logoutService();
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(500).json({
+      error: "LOGOUT_FAILED",
+      message: error.message || "Logout failed",
+    });
   }
+});
+
+// GET /users/me - Get current user (protected route example)
+router.get("/me", authenticateToken, async (req, res) => {
+  res.status(200).json({ user: req.user });
 });
 
 export default router;
-
