@@ -1,133 +1,312 @@
-import { createClient } from "@supabase/supabase-js";
+import Database from "better-sqlite3";
+import path from "path";
 
-// Replace with your Supabase project URL and anon key
-declare const process: any;
-const supabaseUrl = process.env.SUPABASE_URL || "";
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
+const db = new Database(path.join(__dirname, "../../date-nite.db"));
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+/* =====================================================
+   TYPES
+===================================================== */
 
-// USERS CRUD
-export async function getUser(id: string) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", id)
-    .single();
-  if (error) throw error;
-  return data;
-}
-
-export async function createUser(user: {
+export interface User {
   id: string;
   email: string;
+  favorites: string[];
+  password_hash: string;
+}
+
+export interface DateIdea {
+  id: string;
+  type: string;
+  name: string;
+  location: string;
+  avg_cost: number;
+  recommended_group: string;
+  avg_rating: number;
+  group_size: string;
+  icon: string;
+  description: string;
+  google_place_id: string | null;
+}
+
+export interface Rating {
+  id: string;
+  user_id: string;
+  date_id: string;
+  romance_level: string;
+  group_size: string;
+  cost: number;
+  good_bad: string;
+  first_date: number; // 0 or 1
+  review: string;
+}
+
+/* =====================================================
+   TABLE SETUP
+===================================================== */
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  favorites TEXT NOT NULL,
+  password_hash TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dates (
+  id TEXT PRIMARY KEY,
+  type TEXT,
+  name TEXT,
+  location TEXT,
+  avg_cost REAL,
+  recommended_group TEXT,
+  avg_rating REAL,
+  group_size TEXT,
+  icon TEXT,
+  description TEXT,
+  google_place_id TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ratings (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  date_id TEXT,
+  romance_level TEXT,
+  group_size TEXT,
+  cost REAL,
+  good_bad TEXT,
+  first_date INTEGER,
+  review TEXT
+);
+`);
+
+/* =====================================================
+   USERS (WITH AUTH SUPPORT)
+===================================================== */
+
+type DBUser = {
+  id: string;
+  email: string;
+  favorites: string;
+  password_hash: string;
+};
+
+function normalizeUser(row: DBUser): User {
+  return {
+    id: row.id,
+    email: row.email,
+    favorites: row.favorites ? JSON.parse(row.favorites) : [],
+    password_hash: row.password_hash,
+  };
+}
+
+export function getUser(id: string): User | null {
+  const row = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as
+    | DBUser
+    | undefined;
+
+  if (!row) return null;
+  return normalizeUser(row);
+}
+
+export function getUserByEmail(email: string): User | null {
+  const row = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as
+    | DBUser
+    | undefined;
+
+  if (!row) return null;
+  return normalizeUser(row);
+}
+
+/**
+ * Create user (expects ALREADY HASHED password)
+ */
+export function createUser(user: {
+  id: string;
+  email: string;
+  password_hash: string;
   favorites?: string[];
-}) {
-  const { data, error } = await supabase.from("users").insert([user]).single();
-  if (error) throw error;
-  return data;
+}): User | null {
+  db.prepare(
+    "INSERT INTO users (id, email, favorites, password_hash) VALUES (?, ?, ?, ?)",
+  ).run(
+    user.id,
+    user.email,
+    JSON.stringify(user.favorites ?? []),
+    user.password_hash,
+  );
+
+  return getUser(user.id);
 }
 
-export async function updateUser(
+export function updateUser(
   id: string,
-  updates: Partial<{ email: string; favorites: string[] }>,
-) {
-  const { data, error } = await supabase
-    .from("users")
-    .update(updates)
-    .eq("id", id)
-    .single();
-  if (error) throw error;
-  return data;
+  updates: Partial<{
+    email: string;
+    favorites: string[];
+    password_hash: string;
+  }>,
+): User | null {
+  const existing = getUser(id);
+  if (!existing) throw new Error("User not found");
+
+  const email = updates.email ?? existing.email;
+  const favorites = updates.favorites ?? existing.favorites;
+  const password_hash = updates.password_hash ?? existing.password_hash;
+
+  db.prepare(
+    "UPDATE users SET email = ?, favorites = ?, password_hash = ? WHERE id = ?",
+  ).run(email, JSON.stringify(favorites), password_hash, id);
+
+  return getUser(id);
 }
 
-export async function deleteUser(id: string) {
-  const { data, error } = await supabase.from("users").delete().eq("id", id);
-  if (error) throw error;
-  return data;
+export function deleteUser(id: string): boolean {
+  db.prepare("DELETE FROM users WHERE id = ?").run(id);
+  return true;
 }
 
-export async function getUserByEmail(email: string) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email)
-    .single();
-  if (error) throw error;
-  return data;
+/* =====================================================
+   DATES
+===================================================== */
+
+export function getDate(id: string): DateIdea | null {
+  const row = db.prepare("SELECT * FROM dates WHERE id = ?").get(id);
+  return (row as DateIdea) ?? null;
 }
 
-// DATES CRUD
-export async function getDate(id: string) {
-  const { data, error } = await supabase
-    .from("dates")
-    .select("*")
-    .eq("id", id)
-    .single();
-  if (error) throw error;
-  return data;
+export function getAllDates(): DateIdea[] {
+  return db.prepare("SELECT * FROM dates").all() as DateIdea[];
 }
 
-export async function getAllDates() {
-  const { data, error } = await supabase.from("dates").select("*");
-  if (error) throw error;
-  return data;
+export function createDate(date: DateIdea): DateIdea | null {
+  db.prepare(
+    `
+    INSERT INTO dates (
+      id, type, name, location, avg_cost,
+      recommended_group, avg_rating,
+      group_size, icon, description, google_place_id
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+  ).run(
+    date.id,
+    date.type,
+    date.name,
+    date.location,
+    date.avg_cost,
+    date.recommended_group,
+    date.avg_rating,
+    date.group_size,
+    date.icon,
+    date.description,
+    date.google_place_id,
+  );
+
+  return getDate(date.id);
 }
 
-export async function createDate(date: any) {
-  const { data, error } = await supabase.from("dates").insert([date]).single();
-  if (error) throw error;
-  return data;
+export function updateDate(
+  id: string,
+  updates: Partial<DateIdea>,
+): DateIdea | null {
+  const existing = getDate(id);
+  if (!existing) throw new Error("Date not found");
+
+  db.prepare(
+    `
+    UPDATE dates SET
+      type = ?, name = ?, location = ?, avg_cost = ?,
+      recommended_group = ?, avg_rating = ?, group_size = ?,
+      icon = ?, description = ?, google_place_id = ?
+    WHERE id = ?
+  `,
+  ).run(
+    updates.type ?? existing.type,
+    updates.name ?? existing.name,
+    updates.location ?? existing.location,
+    updates.avg_cost ?? existing.avg_cost,
+    updates.recommended_group ?? existing.recommended_group,
+    updates.avg_rating ?? existing.avg_rating,
+    updates.group_size ?? existing.group_size,
+    updates.icon ?? existing.icon,
+    updates.description ?? existing.description,
+    updates.google_place_id ?? existing.google_place_id,
+    id,
+  );
+
+  return getDate(id);
 }
 
-export async function updateDate(id: string, updates: any) {
-  const { data, error } = await supabase
-    .from("dates")
-    .update(updates)
-    .eq("id", id)
-    .single();
-  if (error) throw error;
-  return data;
+export function deleteDate(id: string): boolean {
+  db.prepare("DELETE FROM dates WHERE id = ?").run(id);
+  return true;
 }
 
-export async function deleteDate(id: string) {
-  const { data, error } = await supabase.from("dates").delete().eq("id", id);
-  if (error) throw error;
-  return data;
+/* =====================================================
+   RATINGS
+===================================================== */
+
+export function getRating(id: string): Rating | null {
+  const row = db.prepare("SELECT * FROM ratings WHERE id = ?").get(id);
+  return (row as Rating) ?? null;
 }
 
-// RATINGS CRUD
-export async function getRating(id: string) {
-  const { data, error } = await supabase
-    .from("ratings")
-    .select("*")
-    .eq("id", id)
-    .single();
-  if (error) throw error;
-  return data;
+export function createRating(rating: Rating): Rating | null {
+  db.prepare(
+    `
+    INSERT INTO ratings (
+      id, user_id, date_id,
+      romance_level, group_size,
+      cost, good_bad, first_date, review
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+  ).run(
+    rating.id,
+    rating.user_id,
+    rating.date_id,
+    rating.romance_level,
+    rating.group_size,
+    rating.cost,
+    rating.good_bad,
+    rating.first_date,
+    rating.review,
+  );
+
+  return getRating(rating.id);
 }
 
-export async function createRating(rating: any) {
-  const { data, error } = await supabase
-    .from("ratings")
-    .insert([rating])
-    .single();
-  if (error) throw error;
-  return data;
+export function updateRating(
+  id: string,
+  updates: Partial<Rating>,
+): Rating | null {
+  const existing = getRating(id);
+  if (!existing) throw new Error("Rating not found");
+
+  db.prepare(
+    `
+    UPDATE ratings SET
+      user_id = ?, date_id = ?, romance_level = ?,
+      group_size = ?, cost = ?, good_bad = ?,
+      first_date = ?, review = ?
+    WHERE id = ?
+  `,
+  ).run(
+    updates.user_id ?? existing.user_id,
+    updates.date_id ?? existing.date_id,
+    updates.romance_level ?? existing.romance_level,
+    updates.group_size ?? existing.group_size,
+    updates.cost ?? existing.cost,
+    updates.good_bad ?? existing.good_bad,
+    updates.first_date ?? existing.first_date,
+    updates.review ?? existing.review,
+    id,
+  );
+
+  return getRating(id);
 }
 
-export async function updateRating(id: string, updates: any) {
-  const { data, error } = await supabase
-    .from("ratings")
-    .update(updates)
-    .eq("id", id)
-    .single();
-  if (error) throw error;
-  return data;
-}
-
-export async function deleteRating(id: string) {
-  const { data, error } = await supabase.from("ratings").delete().eq("id", id);
-  if (error) throw error;
-  return data;
+export function deleteRating(id: string): boolean {
+  db.prepare("DELETE FROM ratings WHERE id = ?").run(id);
+  return true;
 }

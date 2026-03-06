@@ -1,4 +1,4 @@
-import { supabase, getDate, getAllDates, createDate } from "../database";
+import { getDate, getAllDates, createDate } from "../database";
 import { fetchGooglePlace } from "./googlePlacesService";
 import { generateIcon } from "../utils/iconGenerator";
 import type {
@@ -6,19 +6,20 @@ import type {
   CreateDateResponseDTO,
   Date
 } from "@shared/date.types";
+import { v4 as uuidv4 } from "uuid";
 
 // get date by id
-export async function fetchDateById(id: string) {
-  return await getDate(id);
+export function fetchDateById(id: string) {
+  return getDate(id);
 }
 
 // get all dates
-export async function fetchAllDates() {
-  return await getAllDates();
+export function fetchAllDates() {
+  return getAllDates();
 }
 
 // return all dates
-export async function getDateService() {
+export function getDateService() {
   const dates = fetchAllDates();
   return dates;
 }
@@ -49,7 +50,7 @@ export async function createDateService(
     throw new Error('VALIDATION_ERROR');
   }
 
-  let description: string | undefined;
+  let description: string | null = null;
   let icon: string;
 
   // Handle venue dates with Google Places integration
@@ -87,21 +88,26 @@ export async function createDateService(
     icon = generateIcon(name, type);
   }
 
-  // Prepare data for database
+  // Prepare data for SQLite (requires all fields)
+  const id = uuidv4();
   const dateToInsert = {
+    id,
     type,
     name: name.trim(),
+    location: null,              // SQLite expects all fields
+    avg_cost: null,
+    recommended_group: null,
+    avg_rating: null,
+    group_size: null,
     icon,
-    ...(description && { description }),
-    ...(google_place_id && { google_place_id }),
+    description: description || null,
+    google_place_id: google_place_id || null
   };
 
   try {
-    const newDate = await createDate(dateToInsert);
+    const newDate = createDate(dateToInsert);  // SQLite returns object directly
     return { date: newDate as Date };
   } catch (error: any) {
     throw new Error('DATE_CREATION_FAILED');
   }
 }
-
-// function for setfavoriteda

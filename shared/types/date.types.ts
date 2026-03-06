@@ -3,12 +3,14 @@ export interface Date {
   id: string;
   type: 'venue' | 'non-venue';
   name: string;                    // For venue: "Business Name (Full Address)"
+  location?: string;               // Location information
   google_place_id?: string;        // Google Place ID (venue dates only)
   icon?: string;                   // Auto-generated emoji
   description?: string;            // From Google Places for venues
   avg_cost?: number;               // Calculated from user review submissions
   avg_rating?: number;             // Calculated from user review submissions
   recommended_group?: string;      // Calculated from review group_size field (single/double/triple+)
+  group_size?: string;             // Group size information
 }
 
 // Google Places search result

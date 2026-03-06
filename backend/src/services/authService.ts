@@ -1,5 +1,6 @@
-import { supabase, getUserByEmail } from "../database";
+import { getUserByEmail } from "../database";
 import { signToken } from "../utils/jwt";
+import bcrypt from "bcryptjs";
 import type {
   LoginDTO,
   LoginResponseDTO,
@@ -11,18 +12,21 @@ export async function loginService(
 ): Promise<LoginResponseDTO> {
   const { email, password } = credentials;
 
-  // Authenticate with Supabase
-  const { data: authData, error: authError } =
-    await supabase.auth.signInWithPassword({ email, password });
+  // Fetch user profile
+  const profile = getUserByEmail(email);
 
-  if (authError || !authData.user) {
+  if (!profile) {
     throw new Error("INVALID_CREDENTIALS");
   }
 
-  // Fetch user profile
-  const profile = await getUserByEmail(email);
+  // Compare password with hash
+  const valid = await bcrypt.compare(password, profile.password_hash);
 
-  // Generate JWT token (not Supabase token)
+  if (!valid) {
+    throw new Error("INVALID_CREDENTIALS");
+  }
+
+  // Generate JWT token
   const accessToken = signToken({
     userId: profile.id,
     email: profile.email,
