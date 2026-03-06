@@ -10,14 +10,12 @@ const router = Router();
 // POST /users - Register
 router.post("/", async (req, res) => {
   const { email, password } = req.body as RegisterUserDTO;
-
   if (!email || !password) {
     return res.status(400).json({
       error: "VALIDATION_ERROR",
       message: "email and password required",
     });
   }
-
   try {
     const result = await registerUserService({ email, password });
     res.status(201).json(result);
@@ -32,14 +30,12 @@ router.post("/", async (req, res) => {
 // POST /users/login - Login
 router.post("/login", async (req, res) => {
   const { email, password } = req.body as LoginDTO;
-
   if (!email || !password) {
     return res.status(400).json({
       error: "VALIDATION_ERROR",
       message: "email and password required",
     });
   }
-
   try {
     const result = await loginService({ email, password });
     res.status(200).json(result);
