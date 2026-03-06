@@ -1,6 +1,5 @@
 outline-imgs
 
-
 .DS_Store
 /node_modules
 /backend/node_modules
@@ -10,14 +9,3 @@ outline-imgs
 /backend/.env
 /.vscode
 /.idea
-*.log
-*.tmp
-*.bak
-*.swp
-*.swo
-*.zip
-*.tar.gz
-*.rar
-*.7z
-*.exe
-*.msi
