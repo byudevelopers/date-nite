@@ -1,3 +1,6 @@
 @import './globals.css';
 @import './navbar.css';
-@import './home.css';
+@import './layout.css';
+@import './sidebar.css';
+@import './dateCard.css';
+@import './modal.css';

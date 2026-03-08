@@ -1,25 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import DateCard, { StarRating } from './components/DateCard';
+import SearchBar from './components/SearchBar';
+import Sidebar from './components/Sidebar';
 import { getDates } from '../services/api';
 
-const COST_RANGES = ['Free', 'Under $10', '$10–$25', '$25–$50', '$50+'];
-const DATE_TYPES = ['Venue', 'At-home'];
-
-function FilterSection({ title, options, selected, onToggle }) {
-  return (
-    <div className="filter-section">
-      <h4 className="filter-title">{title}</h4>
-      <div className="filter-options">
-        {options.map(opt => (
-          <label key={opt} className={`filter-chip ${selected.includes(opt) ? 'active' : ''}`}>
-            <input type="checkbox" checked={selected.includes(opt)} onChange={() => onToggle(opt)} />
-            {opt}
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
+const FILTER_SECTIONS = [
+  { title: 'Date Type', key: 'type', options: ['Venue', 'At-home'] },
+  { title: 'Cost', key: 'cost', options: ['Free', 'Under $10', '$10–$25', '$25–$50', '$50+'] },
+];
 
 function DateInfoModal({ date, onClose }) {
   if (!date) return null;
@@ -60,7 +48,7 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [filters, setFilters] = useState({ cost: [], type: [] });
+  const [filters, setFilters] = useState({ type: [], cost: [] });
 
   useEffect(() => {
     async function fetchDates() {
@@ -85,13 +73,12 @@ export default function Home() {
   }
 
   function clearFilters() {
-    setFilters({ cost: [], type: [] });
+    setFilters({ type: [], cost: [] });
   }
 
-  const activeFilterCount = Object.values(filters).flat().length;
-
   const filtered = dates.filter(d => {
-    if (search && !d.name.toLowerCase().includes(search.toLowerCase()) && !d.description?.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !d.name.toLowerCase().includes(search.toLowerCase()) &&
+        !d.description?.toLowerCase().includes(search.toLowerCase())) return false;
     if (filters.type.length) {
       const typeMap = { 'Venue': 'venue', 'At-home': 'non-venue' };
       if (!filters.type.some(t => typeMap[t] === d.type)) return false;
@@ -101,68 +88,60 @@ export default function Home() {
 
   return (
     <div className="home-layout">
-      {/* Search Bar */}
-      <div className="search-bar-wrapper">
-        <div className="search-bar">
-          <span className="search-icon">🔍</span>
-          <input
-            type="text"
-            placeholder="Search date ideas..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="search-input"
-          />
-          {search && <button className="search-clear" onClick={() => setSearch('')}>✕</button>}
-        </div>
-        <button className="filter-toggle-btn" onClick={() => setSidebarOpen(o => !o)}>
-          <span>Filters</span>
-          {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
-          <span>{sidebarOpen ? '◀' : '▶'}</span>
-        </button>
-      </div>
+      <SearchBar
+        value={search}
+        onChange={setSearch}
+        onClear={() => setSearch('')}
+        placeholder="Search date ideas..."
+      />
 
       <div className="home-body">
-        {/* Sidebar */}
-        <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-          <div className="sidebar-header">
-            <h3>Filters</h3>
-            {activeFilterCount > 0 && (
-              <button className="clear-btn" onClick={clearFilters}>Clear all</button>
+        {!sidebarOpen && (
+          <button className="sidebar-reopen-btn" onClick={() => setSidebarOpen(true)}>
+            ▶ Filters
+          </button>
+        )}
+
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          filters={filters}
+          onToggle={toggleFilter}
+          onClear={clearFilters}
+          filterSections={FILTER_SECTIONS}
+        />
+
+        <main className="cards-area">
+          <div className="cards-inner">
+            {loading ? (
+              <div className="empty-state"><p>Loading dates...</p></div>
+            ) : error ? (
+              <div className="empty-state"><p>Couldn't load dates. Is the backend running?</p></div>
+            ) : (
+              <>
+                <div className="results-header">
+                  <span className="results-count">
+                    {filtered.length} date{filtered.length !== 1 ? 's' : ''} found
+                  </span>
+                </div>
+                {filtered.length === 0 ? (
+                  <div className="empty-state">
+                    <p>No dates match your filters.</p>
+                    <button onClick={clearFilters} className="clear-btn-lg">Clear filters</button>
+                  </div>
+                ) : (
+                  <div className="cards-grid">
+                    {filtered.map(date => (
+                      <DateCard key={date.id} date={date} onClick={setSelectedDate} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
-          <FilterSection title="Date Type" options={DATE_TYPES} selected={filters.type} onToggle={v => toggleFilter('type', v)} />
-          <FilterSection title="Cost" options={COST_RANGES} selected={filters.cost} onToggle={v => toggleFilter('cost', v)} />
-        </aside>
-
-        {/* Main Content */}
-        <main className="cards-area">
-          {loading ? (
-            <div className="empty-state"><p>Loading dates...</p></div>
-          ) : error ? (
-            <div className="empty-state"><p>Couldn't load dates. Is the backend running?</p></div>
-          ) : (
-            <>
-              <div className="results-header">
-                <span className="results-count">{filtered.length} date{filtered.length !== 1 ? 's' : ''} found</span>
-              </div>
-              {filtered.length === 0 ? (
-                <div className="empty-state">
-                  <p>No dates match your filters.</p>
-                  <button onClick={clearFilters} className="clear-btn-lg">Clear filters</button>
-                </div>
-              ) : (
-                <div className="cards-grid">
-                  {filtered.map(date => (
-                    <DateCard key={date.id} date={date} onClick={setSelectedDate} />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
         </main>
       </div>
 
-      {/* Date Info Modal */}
       <DateInfoModal date={selectedDate} onClose={() => setSelectedDate(null)} />
     </div>
   );
