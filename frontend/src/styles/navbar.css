@@ -26,3 +26,9 @@
     text-decoration: none;
     margin-left: 1rem;
 }
+
+.nav-link--dev {
+    color: var(--color-text-subtle);
+    font-size: 1rem;
+    line-height: 1;
+}
