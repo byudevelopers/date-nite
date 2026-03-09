@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Favorites from './pages/Favorites';
+import DevTools from './pages/DevTools';
 
 function App() {
   const location = useLocation();
@@ -17,6 +18,7 @@ function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/favorites" element={<Favorites />} />
+          {import.meta.env.DEV ? <Route path="/dev" element={<DevTools />} /> : null}
         </Routes>
       </main>
     </>
