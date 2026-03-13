@@ -37,7 +37,7 @@ export interface Rating {
   cost: number;
   good_bad: string;
   first_date: number; // 0 or 1
-  review: string;
+  created_at: string; // ISO 8601 date string
 }
 
 /* =====================================================
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS ratings (
   cost REAL,
   good_bad TEXT,
   first_date INTEGER,
-  review TEXT
+  created_at TEXT NOT NULL
 );
 `);
 
@@ -257,7 +257,7 @@ export function createRating(rating: Rating): Rating | null {
     INSERT INTO ratings (
       id, user_id, date_id,
       romance_level, group_size,
-      cost, good_bad, first_date, review
+      cost, good_bad, first_date, created_at
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
@@ -270,7 +270,7 @@ export function createRating(rating: Rating): Rating | null {
     rating.cost,
     rating.good_bad,
     rating.first_date,
-    rating.review,
+    rating.created_at,
   );
 
   return getRating(rating.id);
@@ -288,7 +288,7 @@ export function updateRating(
     UPDATE ratings SET
       user_id = ?, date_id = ?, romance_level = ?,
       group_size = ?, cost = ?, good_bad = ?,
-      first_date = ?, review = ?
+      first_date = ?, created_at = ?
     WHERE id = ?
   `,
   ).run(
@@ -299,7 +299,7 @@ export function updateRating(
     updates.cost ?? existing.cost,
     updates.good_bad ?? existing.good_bad,
     updates.first_date ?? existing.first_date,
-    updates.review ?? existing.review,
+    updates.created_at ?? existing.created_at,
     id,
   );
 
@@ -309,4 +309,20 @@ export function updateRating(
 export function deleteRating(id: string): boolean {
   db.prepare("DELETE FROM ratings WHERE id = ?").run(id);
   return true;
+}
+
+export function getRatingsByDateId(dateId: string): Rating[] {
+  const rows = db.prepare("SELECT * FROM ratings WHERE date_id = ?").all(dateId);
+  return rows as Rating[];
+}
+
+export function getRecentRatingByUser(dateId: string, userId: string, hoursBack: number): Rating | null {
+  const row = db.prepare(`
+    SELECT * FROM ratings
+    WHERE date_id = ? AND user_id = ?
+    AND datetime(created_at) > datetime('now', '-${hoursBack} hours')
+    ORDER BY created_at DESC
+    LIMIT 1
+  `).get(dateId, userId);
+  return (row as Rating) ?? null;
 }

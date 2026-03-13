@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Date Nite is a community-driven date idea rating application for university students (starting with BYU). Users can submit, rate, and discover date ideas based on community feedback. The application uses a REST API architecture with React frontend and Node.js/Express backend backed by Supabase.
+Date Nite is a community-driven date idea rating application for university students (starting with BYU). Users can submit, rate, and discover date ideas based on community feedback. The application uses a REST API architecture with React frontend and Node.js/Express backend backed by SQLite.
 
 ## Development Commands
 
@@ -55,17 +55,21 @@ This repository contains both frontend and backend in separate directories at th
 
 The backend follows a layered architecture separating concerns:
 
-1. **database.ts** - Direct Supabase client operations
-   - Exports configured `supabase` client instance
+1. **database.ts** - SQLite database operations using better-sqlite3
+   - Database file location: `date-nite.db` in project root
+   - Initializes schema on startup (creates tables if not exist)
    - Contains low-level CRUD functions for users, dates, and ratings tables
    - Functions throw errors on failure (no error wrapping here)
+   - Important: `createUser()` expects pre-hashed passwords
+   - Rating helper functions: `getRatingsByDateId()` for aggregate calculations, `getRecentRatingByUser()` for cooldown checks
 
 2. **services/** - Business logic layer
-   - `userService.ts`: Handles user registration with Supabase Auth + profile creation, returns JWT token
-   - `authService.ts`: Handles login/logout operations, generates JWT tokens
-   - `dateService.ts`: Date idea business logic (placeholder)
+   - `userService.ts`: Handles user registration with bcrypt password hashing (10 rounds), generates UUIDs with crypto.randomUUID(), returns JWT token
+   - `authService.ts`: Handles login/logout operations, verifies passwords with bcrypt.compare(), generates JWT tokens
+   - `dateService.ts`: Date idea business logic including fetchDateById(), fetchAllDates(), createDateService() with Google Places integration for venue dates and automatic icon generation
+   - `googlePlacesService.ts`: Google Places API integration with searchGooglePlaces() (Text Search API v1) and fetchGooglePlace() (Place Details), returns place data including name, address, types, editorial summary, rating, and price level
+   - `ratingService.ts`: Rating business logic including createRatingService() with 24-hour cooldown enforcement and automatic date average updates, and getAveragesForDate() for filtered aggregate statistics
    - Services orchestrate multiple database calls and apply business rules
-   - Services handle Supabase Auth integration but return implementation-agnostic JWT tokens
    - All service functions use DTOs from `/shared/types` for type safety
 
 3. **routes/** - HTTP request handling
@@ -74,14 +78,20 @@ The backend follows a layered architecture separating concerns:
      - `POST /users/login` - User login (returns user + JWT)
      - `POST /users/logout` - User logout (requires authentication)
      - `GET /users/me` - Get current authenticated user (protected route example)
-   - `dates.ts`: Date endpoints (placeholder)
+   - `dates.ts`: Date endpoints:
+     - `GET /dates` - Fetch all date ideas
+     - `GET /dates/search-places?query=&location=` - Search Google Places (no auth required)
+     - `POST /dates` - Create new date idea (requires authentication, integrates with Google Places for venue dates)
+   - `ratings.ts`: Rating endpoints:
+     - `POST /ratings` - Create new rating (requires authentication, enforces 24-hour cooldown, auto-updates date averages)
+     - `GET /ratings/averages/:dateId` - Get filtered aggregate statistics (public, supports romance_level, group_size, first_date filters)
    - `health.ts`: Health check endpoint (`GET /health`)
    - Routes validate request bodies and call service functions
    - Returns standardized error codes (e.g., `VALIDATION_ERROR`, `INVALID_CREDENTIALS`)
-   - Returns appropriate HTTP status codes (201 for creation, 400 for validation errors, 401 for auth errors, 500 for server errors)
+   - Returns appropriate HTTP status codes (201 for creation, 400 for validation errors, 401 for auth errors, 429 for rate limiting, 500 for server errors)
 
 4. **index.ts** - Express app setup
-   - Mounts routers (`/users`, `/health`)
+   - Mounts routers (`/users`, `/dates`, `/ratings`, `/health`)
    - CORS middleware configured for frontend origin
    - JSON body parsing middleware
    - Server listening on port 3000
@@ -96,18 +106,28 @@ The backend follows a layered architecture separating concerns:
    - `jwt.ts`: JWT token signing and verification
      - `signToken()` - Creates JWT with user ID and email
      - `verifyToken()` - Validates and decodes JWT tokens
+   - `iconGenerator.ts`: Emoji icon generation for date ideas
+     - Maps keywords (name and Google Place types) to appropriate emojis
+     - Default emoji: ❤️
 
 ### Authentication & JWT
 
-The application uses JWT-based authentication that's independent of Supabase sessions:
+The application uses local JWT-based authentication with bcrypt password hashing:
 
 **Token Flow:**
-1. User registers or logs in via Supabase Auth
-2. Backend verifies credentials with Supabase
-3. Backend generates custom JWT token (7-day expiration)
-4. Frontend stores JWT in localStorage
-5. Frontend includes JWT in `Authorization: Bearer <token>` header
-6. Backend middleware validates JWT (not Supabase session)
+1. User registers with email/password
+2. Backend hashes password with bcrypt (10 rounds)
+3. Backend stores user with hashed password in SQLite
+4. Backend generates custom JWT token (7-day expiration)
+5. Frontend stores JWT in localStorage
+6. Frontend includes JWT in `Authorization: Bearer <token>` header
+7. Backend middleware validates JWT
+
+**Password Security:**
+- Registration: Passwords hashed with `bcrypt.hash(password, 10)` before storage
+- Login: Passwords verified with `bcrypt.compare(password, stored_hash)`
+- Passwords never stored in plaintext
+- User IDs are UUIDs generated with `crypto.randomUUID()` (not from external auth service)
 
 **Response Format:**
 ```typescript
@@ -167,6 +187,26 @@ curl -X POST http://localhost:3000/users/logout \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
+*Create Rating:*
+```bash
+curl -X POST http://localhost:3000/ratings \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date_id": "date-uuid",
+    "romance_level": "romantic",
+    "group_size": "double",
+    "cost": 50.00,
+    "good_bad": "good",
+    "first_date": true
+  }'
+```
+
+*Get Rating Averages (with filters):*
+```bash
+curl "http://localhost:3000/ratings/averages/date-uuid?romance_level=romantic&group_size=double&first_date=true"
+```
+
 ### Shared Types (DTOs)
 
 Located in `/shared/types/`, these TypeScript interfaces are used by both frontend and backend:
@@ -183,30 +223,68 @@ Located in `/shared/types/`, these TypeScript interfaces are used by both fronte
 - `JWTPayload` - JWT token payload structure
 - `AuthErrorCode` - Standard error code types
 
+**Date Types** (`date.types.ts`):
+- `Date` - Date idea entity
+- `GooglePlace` - Google Place data structure
+- `PlacesSearchResponseDTO` - Response from place search
+- `CreateDateDTO` - Date creation request (includes google_place_id for venue dates)
+- `CreateDateResponseDTO` - Date creation response
+- `DateErrorCode` - Standard error codes (PLACE_NOT_FOUND, PLACES_API_ERROR, etc.)
+
+**Rating Types** (`rating.types.ts`):
+- `Rating` - Rating entity with id, user_id, date_id, romance_level, group_size, cost, good_bad, first_date, created_at
+- `CreateRatingDTO` - Rating creation request (all fields required except review)
+- `CreateRatingResponseDTO` - Rating creation response
+- `RatingAveragesDTO` - Aggregate statistics with filters applied
+- `RatingErrorCode` - Standard error codes (VALIDATION_ERROR, DATE_NOT_FOUND, DUPLICATE_RATING_COOLDOWN, etc.)
+
 **Backend Import:**
 ```typescript
 import type { RegisterUserDTO } from "@shared/user.types";
 import type { LoginDTO } from "@shared/auth.types";
+import type { CreateRatingDTO, RatingAveragesDTO } from "@shared/rating.types";
 ```
 
 Backend tsconfig.json includes path mapping: `"@shared/*": ["../shared/types/*"]`
 
-### Database Schema (Supabase)
+### Database Schema (SQLite)
 
-See `backend/supabase_schema.md` and `backend/supabase_schema.sql` for full schema details.
+The application uses SQLite with better-sqlite3. Database file: `date-nite.db` in project root. Schema is initialized automatically on application startup (see `backend/src/database.ts`).
 
 **Key tables:**
-- `users`: id (uuid), email (text), favorites (uuid[])
-  - id references `auth.users(id)` in Supabase Auth
-- `dates`: id, type ('venue'/'non-venue'), name, location, avg_cost, recommended_group, avg_rating, group_size, icon, description
-- `ratings`: id, user_id, date_id, romance_level ('casual'/'romantic'), group_size ('single'/'double'/'group'), cost, good_bad ('good'/'bad'), first_date (boolean), review
+- `users`:
+  - id (TEXT) - UUID generated with crypto.randomUUID()
+  - email (TEXT UNIQUE NOT NULL)
+  - favorites (TEXT NOT NULL) - JSON string array of date IDs
+  - password_hash (TEXT NOT NULL) - bcrypt hash of user password
+- `dates`:
+  - id (TEXT PRIMARY KEY)
+  - type (TEXT) - 'venue' or 'non-venue'
+  - name (TEXT)
+  - location (TEXT)
+  - avg_cost (REAL)
+  - recommended_group (TEXT)
+  - avg_rating (REAL)
+  - group_size (TEXT)
+  - icon (TEXT) - emoji icon
+  - description (TEXT)
+  - google_place_id (TEXT) - Google Place ID for venue-type dates
+- `ratings`:
+  - id (TEXT PRIMARY KEY)
+  - user_id (TEXT)
+  - date_id (TEXT)
+  - romance_level (TEXT) - 'casual' or 'romantic'
+  - group_size (TEXT) - 'single', 'double', or 'group'
+  - cost (REAL)
+  - good_bad (TEXT) - 'good' or 'bad'
+  - first_date (INTEGER) - 0 or 1 (boolean)
+  - created_at (TEXT NOT NULL) - ISO 8601 date string for 24-hour cooldown enforcement
 
 **Authentication pattern:**
-- User registration/login authenticates via Supabase Auth
-- Backend generates custom JWT tokens (independent of Supabase sessions)
-- User registration creates both Supabase Auth user AND profile row in `users` table
-- User id in `users` table references Supabase Auth `auth.users(id)`
-- Passwords are hashed and managed by Supabase Auth (not stored in `users` table)
+- Local authentication only (no external auth service)
+- Passwords hashed with bcrypt (10 rounds) and stored in users.password_hash
+- User IDs are self-generated UUIDs (crypto.randomUUID())
+- JWT tokens generated and verified by backend for session management
 
 ### Frontend Structure
 - React 19 with React Router DOM
@@ -219,23 +297,24 @@ See `backend/supabase_schema.md` and `backend/supabase_schema.sql` for full sche
 
 Backend requires the following environment variables in `backend/.env`:
 
-**Supabase Configuration:**
-- `SUPABASE_URL` - Supabase project URL (get from Supabase project settings)
-- `SUPABASE_ANON_KEY` - Supabase anonymous/public key (get from Supabase project settings)
-
 **JWT Configuration:**
 - `JWT_SECRET` - Secret key for signing JWT tokens (use strong random string in production)
 - `JWT_EXPIRES_IN` - JWT token expiration (default: "7d")
 
+**Google Places API Configuration:**
+- `GOOGLE_PLACES_API_KEY` - Google Places API key (required for venue date features and place search)
+
 **Example `.env` file:**
 ```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
+# JWT Configuration (REQUIRED)
 JWT_SECRET=your-secret-key-change-in-production
 JWT_EXPIRES_IN=7d
+
+# Google Places API (REQUIRED for venue date features)
+GOOGLE_PLACES_API_KEY=your-google-api-key
 ```
 
-**Note:** Tests require valid Supabase credentials to run successfully. Jest automatically loads environment variables via `setupTests.ts`.
+**Note:** Jest automatically loads environment variables via `setupTests.ts` if it exists.
 
 ## Important Notes
 
@@ -245,13 +324,15 @@ JWT_EXPIRES_IN=7d
 - Uses `ts-node-dev` for development with transpile-only mode
 
 ### Current Limitations
-- Date routes exist but are mostly empty (only placeholder comment)
 - No global error handling middleware yet
 - No advanced request validation middleware (only basic email/password checks)
 - Frontend-backend authentication integration not yet implemented
 - No username support yet (planned for future iteration)
 - No refresh token mechanism (JWT tokens expire after 7 days)
 - No token blacklisting for logout (logout is client-side only)
+- Google Places API has rate limits and costs per request
+- Icon generation uses simple keyword matching (could be enhanced with ML/AI)
+- Venue dates depend on Google Places API availability
 
 ### Development Patterns
 
@@ -268,14 +349,38 @@ JWT_EXPIRES_IN=7d
 6. Add tests following Jest/Supertest pattern (see `users.test.ts` and `auth.test.ts`)
 
 **Authentication patterns:**
-- Service functions should interact with Supabase Auth but return JWT tokens
+- Hash passwords with bcrypt before storing: `bcrypt.hash(password, 10)`
+- Verify passwords during login: `bcrypt.compare(password, stored_hash)`
+- Generate UUIDs for user IDs: `crypto.randomUUID()`
 - Use `authenticateToken` middleware for protected routes
 - Access authenticated user via `req.user` (populated by middleware)
 - Return standardized error codes for auth failures
 
+**Google Places integration patterns:**
+- For venue dates, require `google_place_id` in CreateDateDTO
+- Use `searchGooglePlaces()` to find places before date creation
+- `fetchGooglePlace()` retrieves details for a specific place_id
+- Handle `PLACES_API_ERROR` (503) when Google API is unavailable
+- Store `google_place_id` in dates table for future reference
+- Icon generation happens automatically via `iconGenerator` utility
+
+**Rating patterns:**
+- Ratings require authentication (use `authenticateToken` middleware)
+- 24-hour cooldown enforced: users can only rate each date once per 24 hours
+- `first_date` field is boolean in API/DTOs but stored as INTEGER (0/1) in SQLite
+- Service layer automatically converts boolean to 0/1 when creating, and back to boolean in response
+- Creating a rating automatically recalculates and updates `avg_cost` and `avg_rating` on the dates table
+- `avg_rating` is percentage: (count of good ratings / total ratings) * 100
+- Use `getAveragesForDate()` with optional filters (romance_level, group_size, first_date) for aggregate statistics
+- Return 429 status code for `DUPLICATE_RATING_COOLDOWN` errors
+- `created_at` stored as ISO 8601 string (use `new Date().toISOString()`)
+- Database helper `getRecentRatingByUser()` checks for ratings within specified hours using SQLite datetime functions
+
 **Testing patterns:**
 - Use unique emails with timestamps to avoid conflicts: `` `test_${Date.now()}@example.com` ``
+- For rating tests, create unique dates for each test to avoid 24-hour cooldown conflicts
 - Test both success and error cases
 - Test validation errors (400 responses)
 - Test authentication errors (401/403 responses)
 - For protected routes, test both with and without valid tokens
+- Test rate limiting (429 responses for ratings within 24-hour window)
