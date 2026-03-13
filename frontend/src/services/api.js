@@ -18,7 +18,8 @@ async function apiFetch(endpoint, options = {}) {
 
     // Check if response is ok
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();

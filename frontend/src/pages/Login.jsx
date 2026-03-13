@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import React from 'react';
-import App from '../App';
 import { loginUser, registerUser } from '../services/api';
 
 function Login() {
@@ -20,8 +19,8 @@ function Login() {
     
     if (result.success) {
       // Store the session token (auth data)
-      localStorage.setItem('authToken', result.data.auth.access_token);
-      localStorage.setItem('user', JSON.stringify(result.data.auth.user));
+      localStorage.setItem('authToken', result.data.accessToken);
+      localStorage.setItem('user', JSON.stringify(result.data.user));
       navigate('/home');
     } else {
       setError(result.error || 'Login failed');
@@ -38,8 +37,8 @@ function Login() {
     
     if (result.success) {
       // Auto-login after registration
-      localStorage.setItem('authToken', result.data.auth.access_token);
-      localStorage.setItem('user', JSON.stringify(result.data.auth.user));
+      localStorage.setItem('authToken', result.data.accessToken);
+      localStorage.setItem('user', JSON.stringify(result.data.user));
       navigate('/home');
     } else {
       setError(result.error || 'Registration failed');
