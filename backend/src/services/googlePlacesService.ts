@@ -6,20 +6,29 @@ if (!GOOGLE_PLACES_API_KEY) {
   throw new Error('GOOGLE_PLACES_API_KEY environment variable is required');
 }
 
-// Search Google Places (Text Search)
+// Type assertion since we've checked it's defined
+const API_KEY: string = GOOGLE_PLACES_API_KEY;
+
+// Search Google Places (New Text Search API)
 export async function searchGooglePlaces(
   query: string,
   location?: string
 ): Promise<PlacesSearchResponseDTO> {
   try {
-    const url = new URL('https://maps.googleapis.com/maps/api/place/textsearch/json');
+    const url = 'https://places.googleapis.com/v1/places:searchText';
 
     // Combine query with location for better results
     const searchQuery = location ? `${query} in ${location}` : query;
-    url.searchParams.append('query', searchQuery);
-    url.searchParams.append('key', GOOGLE_PLACES_API_KEY);
 
-    const response = await fetch(url.toString());
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.types,places.editorialSummary,places.rating,places.priceLevel'
+      },
+      body: JSON.stringify({ textQuery: searchQuery })
+    });
 
     if (!response.ok) {
       throw new Error(`Google Places API error: ${response.status}`);
@@ -27,15 +36,25 @@ export async function searchGooglePlaces(
 
     const data = await response.json();
 
-    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-      throw new Error(`Places API status: ${data.status}`);
-    }
+    // Map new API response to our format
+    const places: GooglePlace[] = (data.places || []).map((place: any) => ({
+      place_id: place.id,
+      name: place.displayName?.text || '',
+      formatted_address: place.formattedAddress || '',
+      types: place.types || [],
+      editorial_summary: place.editorialSummary ? {
+        overview: place.editorialSummary.text
+      } : undefined,
+      rating: place.rating,
+      price_level: place.priceLevel
+    }));
 
     return {
-      places: data.results || [],
-      status: data.status
+      places,
+      status: places.length > 0 ? 'OK' : 'ZERO_RESULTS'
     };
   } catch (error: any) {
+    console.error('Google Places search error:', error.message);
     throw new Error('PLACES_API_ERROR');
   }
 }

@@ -5,7 +5,6 @@ import datesRouter from "./dates";
 const app = express();
 app.use(express.json());
 app.use("/dates", datesRouter);
-
 describe("Date Endpoints", () => {
   let accessToken: string;
   let testPlaceId: string;
@@ -86,7 +85,7 @@ describe("Date Endpoints", () => {
         .send({
           type: "venue",
           name: "Test Ice Cream Shop (123 Main St, Provo UT)",
-          google_place_id: testPlaceId
+          google_place_id: testPlaceId,
         });
 
       expect(res.status).toBe(201);
@@ -103,7 +102,7 @@ describe("Date Endpoints", () => {
         .set("Authorization", `Bearer ${accessToken}`)
         .send({
           type: "non-venue",
-          name: "Movie Night at Home"
+          name: "Movie Night at Home",
         });
 
       expect(res.status).toBe(201);
@@ -138,7 +137,7 @@ describe("Date Endpoints", () => {
         .send({
           type: "venue",
           name: "Test Venue",
-          google_place_id: "invalid-place-id-12345"
+          google_place_id: "invalid-place-id-12345",
         });
 
       expect(res.status).toBe(404);
