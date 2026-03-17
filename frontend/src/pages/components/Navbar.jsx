@@ -1,8 +1,9 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { checkHealth } from '../../services/api';
+import { checkHealth, logoutUser } from '../../services/api';
 
 function Navbar() {
+  const navigate = useNavigate();
   const [healthStatus, setHealthStatus] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
 
@@ -25,6 +26,17 @@ function Navbar() {
     setTimeout(() => setHealthStatus(null), 5000);
   };
 
+  const handleLogout = async () => {
+    // Call backend logout endpoint to clear cookie
+    await logoutUser();
+
+    // Clear any user data from localStorage
+    localStorage.removeItem('user');
+
+    // Navigate to login page
+    navigate('/');
+  };
+
   return (
     <nav className="navbar navbar-dark">
       <NavLink className="navbar-brand" to="/home">DateNite</NavLink>
@@ -36,7 +48,9 @@ function Navbar() {
           <NavLink className="nav-link" to="/profile">Profile</NavLink>
         </li>
         <li className="nav-item">
-          <NavLink className="nav-link" to="/">Logout</NavLink>
+          <button className="nav-link btn btn-link" onClick={handleLogout}>
+            Logout
+          </button>
         </li>
         <li className="nav-item">
           <button className="nav-link btn btn-link" onClick={handleHealthCheck} disabled={isChecking}>

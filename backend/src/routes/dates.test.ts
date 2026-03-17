@@ -1,19 +1,22 @@
 import request from "supertest";
 import express from "express";
+import cookieParser from "cookie-parser";
 import datesRouter from "./dates";
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
 app.use("/dates", datesRouter);
 describe("Date Endpoints", () => {
-  let accessToken: string;
+  let cookies: string[];
   let testPlaceId: string;
 
   beforeAll(async () => {
-    // Register test user and get token
+    // Register test user and get cookies
     const usersRouter = require("./users").default;
     const authApp = express();
     authApp.use(express.json());
+    authApp.use(cookieParser());
     authApp.use("/users", usersRouter);
 
     const testEmail = `date_test_${Date.now()}@example.com`;
@@ -21,7 +24,8 @@ describe("Date Endpoints", () => {
       .post("/users")
       .send({ email: testEmail, password: "TestPass123!" });
 
-    accessToken = registerRes.body.accessToken;
+    const cookieHeader = registerRes.headers['set-cookie'];
+    cookies = Array.isArray(cookieHeader) ? cookieHeader : [cookieHeader as string];
 
     // Get a real Google Place ID for testing
     const searchRes = await request(app)
@@ -81,7 +85,7 @@ describe("Date Endpoints", () => {
 
       const res = await request(app)
         .post("/dates/create")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           type: "venue",
           name: "Test Ice Cream Shop (123 Main St, Provo UT)",
@@ -99,7 +103,7 @@ describe("Date Endpoints", () => {
     it("should create non-venue date without Place ID", async () => {
       const res = await request(app)
         .post("/dates/create")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           type: "non-venue",
           name: "Movie Night at Home",
@@ -123,7 +127,7 @@ describe("Date Endpoints", () => {
     it("should reject venue date without google_place_id", async () => {
       const res = await request(app)
         .post("/dates/create")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({ type: "venue", name: "Test Venue" });
 
       expect(res.status).toBe(400);
@@ -133,7 +137,7 @@ describe("Date Endpoints", () => {
     it("should reject venue date with invalid google_place_id", async () => {
       const res = await request(app)
         .post("/dates/create")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           type: "venue",
           name: "Test Venue",
@@ -147,7 +151,7 @@ describe("Date Endpoints", () => {
     it("should reject with invalid type", async () => {
       const res = await request(app)
         .post("/dates/create")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({ type: "invalid", name: "Test" });
 
       expect(res.status).toBe(400);

@@ -1,22 +1,25 @@
 import request from "supertest";
 import express from "express";
+import cookieParser from "cookie-parser";
 import ratingsRouter from "./ratings";
 import { getDate } from "../database";
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
 app.use("/ratings", ratingsRouter);
 
 describe("Rating Endpoints", () => {
-  let accessToken: string;
+  let cookies: string[];
   let testDateId: string;
 
   beforeAll(async () => {
-    // Register test user and get token
+    // Register test user and get cookies
     const usersRouter = require("./users").default;
     const datesRouter = require("./dates").default;
     const authApp = express();
     authApp.use(express.json());
+    authApp.use(cookieParser());
     authApp.use("/users", usersRouter);
     authApp.use("/dates", datesRouter);
 
@@ -25,12 +28,13 @@ describe("Rating Endpoints", () => {
       .post("/users")
       .send({ email: testEmail, password: "TestPass123!" });
 
-    accessToken = registerRes.body.accessToken;
+    const cookieHeader = registerRes.headers['set-cookie'];
+    cookies = Array.isArray(cookieHeader) ? cookieHeader : [cookieHeader as string];
 
     // Create a test date for rating
     const dateRes = await request(authApp)
       .post("/dates/create")
-      .set("Authorization", `Bearer ${accessToken}`)
+      .set('Cookie', cookies)
       .send({
         type: "non-venue",
         name: "Test Date for Ratings"
@@ -46,12 +50,13 @@ describe("Rating Endpoints", () => {
       const datesRouter = require("./dates").default;
       const authApp = express();
       authApp.use(express.json());
+      authApp.use(cookieParser());
       authApp.use("/users", usersRouter);
       authApp.use("/dates", datesRouter);
 
       const dateRes = await request(authApp)
         .post("/dates/create")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           type: "non-venue",
           name: "Date for Valid Rating Test"
@@ -61,7 +66,7 @@ describe("Rating Endpoints", () => {
 
       const res = await request(app)
         .post("/ratings")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           date_id: uniqueDateId,
           romance_level: "romantic",
@@ -101,7 +106,7 @@ describe("Rating Endpoints", () => {
     it("should fail if required fields missing", async () => {
       const res = await request(app)
         .post("/ratings")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           date_id: testDateId,
           romance_level: "casual"
@@ -115,7 +120,7 @@ describe("Rating Endpoints", () => {
     it("should fail if date doesn't exist", async () => {
       const res = await request(app)
         .post("/ratings")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           date_id: "non-existent-date-id",
           romance_level: "casual",
@@ -132,7 +137,7 @@ describe("Rating Endpoints", () => {
     it("should fail if romance_level invalid", async () => {
       const res = await request(app)
         .post("/ratings")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           date_id: testDateId,
           romance_level: "invalid_value",
@@ -149,7 +154,7 @@ describe("Rating Endpoints", () => {
     it("should fail if group_size invalid", async () => {
       const res = await request(app)
         .post("/ratings")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           date_id: testDateId,
           romance_level: "casual",
@@ -166,7 +171,7 @@ describe("Rating Endpoints", () => {
     it("should fail if good_bad invalid", async () => {
       const res = await request(app)
         .post("/ratings")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           date_id: testDateId,
           romance_level: "casual",
@@ -183,7 +188,7 @@ describe("Rating Endpoints", () => {
     it("should fail if cost is negative", async () => {
       const res = await request(app)
         .post("/ratings")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           date_id: testDateId,
           romance_level: "casual",
@@ -203,12 +208,13 @@ describe("Rating Endpoints", () => {
       const datesRouter = require("./dates").default;
       const authApp = express();
       authApp.use(express.json());
+      authApp.use(cookieParser());
       authApp.use("/users", usersRouter);
       authApp.use("/dates", datesRouter);
 
       const dateRes = await request(authApp)
         .post("/dates/create")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           type: "non-venue",
           name: "Date for Average Test"
@@ -219,7 +225,7 @@ describe("Rating Endpoints", () => {
       // Create first rating
       await request(app)
         .post("/ratings")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           date_id: newDateId,
           romance_level: "casual",
@@ -242,12 +248,13 @@ describe("Rating Endpoints", () => {
       const datesRouter = require("./dates").default;
       const authApp = express();
       authApp.use(express.json());
+      authApp.use(cookieParser());
       authApp.use("/users", usersRouter);
       authApp.use("/dates", datesRouter);
 
       const dateRes = await request(authApp)
         .post("/dates/create")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           type: "non-venue",
           name: "Date for Boolean Test"
@@ -257,7 +264,7 @@ describe("Rating Endpoints", () => {
 
       const res = await request(app)
         .post("/ratings")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           date_id: newDateId,
           romance_level: "casual",
@@ -273,7 +280,7 @@ describe("Rating Endpoints", () => {
       // Create another unique date
       const dateRes2 = await request(authApp)
         .post("/dates/create")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           type: "non-venue",
           name: "Date for Boolean Test 2"
@@ -283,7 +290,7 @@ describe("Rating Endpoints", () => {
 
       const res2 = await request(app)
         .post("/ratings")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           date_id: newDateId2,
           romance_level: "casual",
@@ -307,13 +314,14 @@ describe("Rating Endpoints", () => {
       const datesRouter = require("./dates").default;
       const authApp = express();
       authApp.use(express.json());
+      authApp.use(cookieParser());
       authApp.use("/users", usersRouter);
       authApp.use("/dates", datesRouter);
 
       // Create test date
       const dateRes = await request(authApp)
         .post("/dates/create")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           type: "non-venue",
           name: "Date for Averages Test"
@@ -324,7 +332,7 @@ describe("Rating Endpoints", () => {
       // Add multiple ratings
       await request(app)
         .post("/ratings")
-        .set("Authorization", `Bearer ${accessToken}`)
+        .set('Cookie', cookies)
         .send({
           date_id: averagesTestDateId,
           romance_level: "romantic",

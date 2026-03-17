@@ -18,7 +18,17 @@ router.post("/", async (req, res) => {
   }
   try {
     const result = await registerUserService({ email, password });
-    res.status(201).json(result);
+
+    // Set HttpOnly cookie
+    res.cookie('authToken', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+    });
+
+    // Return only user, no accessToken in body
+    res.status(201).json({ user: result.user });
   } catch (error: any) {
     res.status(500).json({
       error: "REGISTRATION_FAILED",
@@ -38,7 +48,17 @@ router.post("/login", async (req, res) => {
   }
   try {
     const result = await loginService({ email, password });
-    res.status(200).json(result);
+
+    // Set HttpOnly cookie
+    res.cookie('authToken', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+    });
+
+    // Return only user, no accessToken in body
+    res.status(200).json({ user: result.user });
   } catch (error: any) {
     if (error.message === "INVALID_CREDENTIALS") {
       return res.status(401).json({
@@ -56,6 +76,9 @@ router.post("/login", async (req, res) => {
 // POST /users/logout - Logout (requires auth)
 router.post("/logout", authenticateToken, async (req, res) => {
   try {
+    // Clear the cookie
+    res.clearCookie('authToken');
+
     const result = await logoutService();
     res.status(200).json(result);
   } catch (error: any) {
