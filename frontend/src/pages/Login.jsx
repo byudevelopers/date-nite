@@ -19,7 +19,6 @@ function Login() {
     
     if (result.success) {
       // Store the session token (auth data)
-      localStorage.setItem('authToken', result.data.accessToken);
       localStorage.setItem('user', JSON.stringify(result.data.user));
       navigate('/home');
     } else {
@@ -37,7 +36,6 @@ function Login() {
     
     if (result.success) {
       // Auto-login after registration
-      localStorage.setItem('authToken', result.data.accessToken);
       localStorage.setItem('user', JSON.stringify(result.data.user));
       navigate('/home');
     } else {

@@ -1,6 +1,15 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { logoutUser } from '../../services/api';
 
 function Navbar() {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logoutUser();
+    localStorage.removeItem('user');
+    navigate('/');
+  };
+
   return (
     <nav className="navbar navbar-dark">
       <NavLink className="navbar-brand" to="/home">DateNite</NavLink>
@@ -12,7 +21,7 @@ function Navbar() {
           <NavLink className="nav-link" to="/profile">Profile</NavLink>
         </li>
         <li className="nav-item">
-          <NavLink className="nav-link" to="/">Logout</NavLink>
+          <button className="nav-link" onClick={handleLogout}>Logout</button>
         </li>
         {import.meta.env.DEV && (
           <li className="nav-item">

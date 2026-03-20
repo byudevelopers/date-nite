@@ -5,6 +5,7 @@ dotenv.config();
 
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import usersRouter from "./routes/users";
 import healthRouter from "./routes/health";
 
@@ -16,6 +17,7 @@ app.use(cors({
   credentials: true
 }));
 
+app.use(cookieParser());
 app.use(express.json());
 
 app.use("/health", healthRouter);

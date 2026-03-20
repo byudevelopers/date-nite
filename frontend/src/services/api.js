@@ -9,6 +9,7 @@ async function apiFetch(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, {
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -58,6 +59,13 @@ export async function registerUser(email, password) {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
+}
+
+/**
+ * Logout user (server clears the HttpOnly cookie)
+ */
+export async function logoutUser() {
+  return apiFetch('/users/logout', { method: 'POST' });
 }
 
 /**

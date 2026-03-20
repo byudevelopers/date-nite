@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { registerUserService } from "../services/userService";
-import { loginService, logoutService } from "../services/authService";
+import { loginService } from "../services/authService";
 import { authenticateToken } from "../middleware/auth";
 import type { RegisterUserDTO } from "@shared/user.types";
 import type { LoginDTO } from "@shared/auth.types";
@@ -18,7 +18,13 @@ router.post("/", async (req, res) => {
   }
   try {
     const result = await registerUserService({ email, password });
-    res.status(201).json(result);
+    res.cookie('authToken', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.status(201).json({ user: result.user });
   } catch (error: any) {
     res.status(500).json({
       error: "REGISTRATION_FAILED",
@@ -38,7 +44,13 @@ router.post("/login", async (req, res) => {
   }
   try {
     const result = await loginService({ email, password });
-    res.status(200).json(result);
+    res.cookie('authToken', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.status(200).json({ user: result.user });
   } catch (error: any) {
     if (error.message === "INVALID_CREDENTIALS") {
       return res.status(401).json({
@@ -53,17 +65,10 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// POST /users/logout - Logout (requires auth)
-router.post("/logout", authenticateToken, async (req, res) => {
-  try {
-    const result = await logoutService();
-    res.status(200).json(result);
-  } catch (error: any) {
-    res.status(500).json({
-      error: "LOGOUT_FAILED",
-      message: error.message || "Logout failed",
-    });
-  }
+// POST /users/logout - Logout
+router.post("/logout", async (req, res) => {
+  res.clearCookie('authToken');
+  res.status(200).json({ message: 'Logged out successfully' });
 });
 
 // GET /users/me - Get current user (protected route example)
