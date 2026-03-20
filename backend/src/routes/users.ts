@@ -5,6 +5,8 @@ import { authenticateToken } from "../middleware/auth";
 import type { RegisterUserDTO } from "@shared/user.types";
 import type { LoginDTO } from "@shared/auth.types";
 import { logServerError } from "../utils/errorLogging";
+import { getFavoriteDates } from "../services/userService";
+import { removeFavoriteDate } from "../services/userService";
 
 const router = Router();
 
@@ -79,4 +81,51 @@ router.get("/me", authenticateToken, async (req, res) => {
   res.status(200).json({ user: req.user });
 });
 
+router.get("/favorites", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(400).json({
+        error: "USER_ID_MISSING",
+        message: "User ID is missing",
+      });
+    }
+    const favorites = getFavoriteDates(userId);
+    if (favorites === null) {
+      return res.status(404).json({
+        error: "FAVORITES_NOT_FOUND",
+        message: "No favorite dates found for this user",
+      });
+    }
+    res.status(200).json({ favorites });
+  } catch (error: any) {
+    logServerError(req, error, "get_favorites");
+    res.status(500).json({
+    error: "GET_FAVORITES_FAILED",
+    message: "Failed to get favorite dates",
+  });
+  }
+});
+
+router.delete("/favorites/remove", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    const { dateId } = req.body;
+    if (!userId || !dateId) {
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",
+        message: "User ID and date ID are required",
+      });
+    }
+    removeFavoriteDate(userId, dateId);
+    res.status(200).json({ message: "Favorite date removed successfully" });
+
+  } catch (error: any) {
+    logServerError(req, error, "remove_favorite");
+    res.status(500).json({
+      error: "REMOVE_FAVORITE_FAILED",
+      message: "Failed to remove favorite date",
+    });
+  }
+});
 export default router;
