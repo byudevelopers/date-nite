@@ -1,7 +1,7 @@
 import { createUser } from "../database";
 import { signToken } from "../utils/jwt";
 import { randomUUID } from "crypto";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "bcryptjs";
 import type { RegisterUserDTO, RegisterResponseDTO } from "@shared/user.types";
 
 // Register user with bcrypt password hashing and SQLite

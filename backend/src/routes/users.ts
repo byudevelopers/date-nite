@@ -4,6 +4,7 @@ import { loginService } from "../services/authService";
 import { authenticateToken } from "../middleware/auth";
 import type { RegisterUserDTO } from "@shared/user.types";
 import type { LoginDTO } from "@shared/auth.types";
+import { logServerError } from "../utils/errorLogging";
 
 const router = Router();
 
@@ -24,8 +25,9 @@ router.post("/", async (req, res) => {
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.status(201).json({ user: result.user });
+    res.status(201).json(result);
   } catch (error: any) {
+    logServerError(req, error, "register_user");
     res.status(500).json({
       error: "REGISTRATION_FAILED",
       message: error.message || "Failed to register user",
@@ -58,6 +60,7 @@ router.post("/login", async (req, res) => {
         message: "Invalid email or password",
       });
     }
+    logServerError(req, error, "login_user");
     res.status(500).json({
       error: "LOGIN_FAILED",
       message: "Login failed",
