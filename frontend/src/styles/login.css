@@ -1,0 +1,103 @@
+/* ── Login Page ──────────────────────────────────────── */
+.login-page {
+    min-height: 100vh;
+    margin-top: calc(-1 * var(--navbar-height));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-page);
+    padding: 24px;
+}
+
+.login-page h1 {
+    font-family: var(--font-serif);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.formArea {
+    background: var(--color-bg-surface);
+    border: 2px solid var(--color-border);
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.formArea form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.formArea .form-control {
+    border: 2px solid var(--color-border-input);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 15px;
+    font-family: var(--font-sans);
+    color: var(--color-text-strong);
+    background: var(--color-bg-page);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.formArea .form-control:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-glow);
+    outline: none;
+    background: var(--color-bg-surface);
+}
+
+.formArea .form-control::placeholder {
+    color: var(--color-text-placeholder);
+}
+
+.error {
+    color: var(--color-accent);
+    font-size: 13px;
+    margin: 0;
+}
+
+.controlBtns {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.submitBtn {
+    background: var(--color-accent) !important;
+    border-color: var(--color-accent) !important;
+    border-radius: 10px !important;
+    font-family: var(--font-serif);
+    font-size: 15px;
+    padding: 10px !important;
+    transition: background 0.2s !important;
+}
+
+.submitBtn:hover {
+    background: var(--color-accent-hover) !important;
+    border-color: var(--color-accent-hover) !important;
+}
+
+.createAccountBtn {
+    background: var(--color-bg-muted) !important;
+    color: var(--color-text-body) !important;
+    border: 2px solid var(--color-border) !important;
+    border-radius: 10px !important;
+    font-family: var(--font-serif);
+    font-size: 15px;
+    padding: 10px !important;
+    transition: background 0.2s, border-color 0.2s !important;
+}
+
+.createAccountBtn:hover {
+    border-color: var(--color-accent) !important;
+    color: var(--color-accent) !important;
+}

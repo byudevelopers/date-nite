@@ -46,10 +46,10 @@ function Login() {
   };
 
   return (
-    <main className="container-fluid">
+    <main className="login-page">
       <h1>Login to Date-Nite</h1>
       <div className="formArea">
-        <form method="get">
+        <form onSubmit={handleLogin}>
           <div className="emailInput input-group mb-3">
             <input 
               className="form-control" 

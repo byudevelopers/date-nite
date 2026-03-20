@@ -21,7 +21,7 @@ function Navbar() {
           <NavLink className="nav-link" to="/profile">Profile</NavLink>
         </li>
         <li className="nav-item">
-          <button className="nav-link" onClick={handleLogout}>Logout</button>
+          <NavLink className="nav-link" onClick={handleLogout}>Logout</NavLink>
         </li>
         {import.meta.env.DEV && (
           <li className="nav-item">
