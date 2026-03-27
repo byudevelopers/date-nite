@@ -25,6 +25,7 @@ export interface DateIdea {
   group_size: string;
   icon: string;
   description: string;
+  google_place_id: string | null;
 }
 
 export interface Rating {
@@ -36,7 +37,7 @@ export interface Rating {
   cost: number;
   good_bad: string;
   first_date: number; // 0 or 1
-  review: string;
+  created_at: string; // ISO 8601 date string
 }
 
 /* =====================================================
@@ -61,7 +62,8 @@ CREATE TABLE IF NOT EXISTS dates (
   avg_rating REAL,
   group_size TEXT,
   icon TEXT,
-  description TEXT
+  description TEXT,
+  google_place_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS ratings (
@@ -73,7 +75,7 @@ CREATE TABLE IF NOT EXISTS ratings (
   cost REAL,
   good_bad TEXT,
   first_date INTEGER,
-  review TEXT
+  created_at TEXT NOT NULL
 );
 `);
 
@@ -182,9 +184,9 @@ export function createDate(date: DateIdea): DateIdea | null {
     INSERT INTO dates (
       id, type, name, location, avg_cost,
       recommended_group, avg_rating,
-      group_size, icon, description
+      group_size, icon, description, google_place_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
   ).run(
     date.id,
@@ -197,6 +199,7 @@ export function createDate(date: DateIdea): DateIdea | null {
     date.group_size,
     date.icon,
     date.description,
+    date.google_place_id,
   );
 
   return getDate(date.id);
@@ -214,7 +217,7 @@ export function updateDate(
     UPDATE dates SET
       type = ?, name = ?, location = ?, avg_cost = ?,
       recommended_group = ?, avg_rating = ?, group_size = ?,
-      icon = ?, description = ?
+      icon = ?, description = ?, google_place_id = ?
     WHERE id = ?
   `,
   ).run(
@@ -227,6 +230,7 @@ export function updateDate(
     updates.group_size ?? existing.group_size,
     updates.icon ?? existing.icon,
     updates.description ?? existing.description,
+    updates.google_place_id ?? existing.google_place_id,
     id,
   );
 
@@ -253,7 +257,7 @@ export function createRating(rating: Rating): Rating | null {
     INSERT INTO ratings (
       id, user_id, date_id,
       romance_level, group_size,
-      cost, good_bad, first_date, review
+      cost, good_bad, first_date, created_at
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
@@ -266,7 +270,7 @@ export function createRating(rating: Rating): Rating | null {
     rating.cost,
     rating.good_bad,
     rating.first_date,
-    rating.review,
+    rating.created_at,
   );
 
   return getRating(rating.id);
@@ -284,7 +288,7 @@ export function updateRating(
     UPDATE ratings SET
       user_id = ?, date_id = ?, romance_level = ?,
       group_size = ?, cost = ?, good_bad = ?,
-      first_date = ?, review = ?
+      first_date = ?, created_at = ?
     WHERE id = ?
   `,
   ).run(
@@ -295,7 +299,7 @@ export function updateRating(
     updates.cost ?? existing.cost,
     updates.good_bad ?? existing.good_bad,
     updates.first_date ?? existing.first_date,
-    updates.review ?? existing.review,
+    updates.created_at ?? existing.created_at,
     id,
   );
 
@@ -305,4 +309,20 @@ export function updateRating(
 export function deleteRating(id: string): boolean {
   db.prepare("DELETE FROM ratings WHERE id = ?").run(id);
   return true;
+}
+
+export function getRatingsByDateId(dateId: string): Rating[] {
+  const rows = db.prepare("SELECT * FROM ratings WHERE date_id = ?").all(dateId);
+  return rows as Rating[];
+}
+
+export function getRecentRatingByUser(dateId: string, userId: string, hoursBack: number): Rating | null {
+  const row = db.prepare(`
+    SELECT * FROM ratings
+    WHERE date_id = ? AND user_id = ?
+    AND datetime(created_at) > datetime('now', '-${hoursBack} hours')
+    ORDER BY created_at DESC
+    LIMIT 1
+  `).get(dateId, userId);
+  return (row as Rating) ?? null;
 }

@@ -8,6 +8,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import usersRouter from "./routes/users";
 import healthRouter from "./routes/health";
+import datesRouter from "./routes/dates";
+import ratingsRouter from "./routes/ratings";
 
 const app = express();
 
@@ -19,6 +21,7 @@ app.use(cors({
 
 app.use(cookieParser());
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/", (_req, res) => {
   res.status(200).json({
@@ -34,6 +37,8 @@ app.get("/.well-known/appspecific/com.chrome.devtools.json", (_req, res) => {
 
 app.use("/health", healthRouter);
 app.use("/users", usersRouter);
+app.use("/dates", datesRouter);
+app.use("/ratings", ratingsRouter);
 
 app.listen(3000, () => {
   console.log("Server running on port 3000");

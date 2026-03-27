@@ -7,6 +7,7 @@ import type { LoginDTO } from "@shared/auth.types";
 import { logServerError } from "../utils/errorLogging";
 import { getFavoriteDates } from "../services/userService";
 import { removeFavoriteDate } from "../services/userService";
+import { setFavoriteDate } from "../services/userService";
 
 const router = Router();
 
@@ -21,13 +22,17 @@ router.post("/", async (req, res) => {
   }
   try {
     const result = await registerUserService({ email, password });
+
+    // Set HttpOnly cookie
     res.cookie('authToken', result.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
     });
-    res.status(201).json(result);
+
+    // Return only user, no accessToken in body
+    res.status(201).json({ user: result.user });
   } catch (error: any) {
     logServerError(req, error, "register_user");
     res.status(500).json({
@@ -48,12 +53,16 @@ router.post("/login", async (req, res) => {
   }
   try {
     const result = await loginService({ email, password });
+
+    // Set HttpOnly cookie
     res.cookie('authToken', result.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
     });
+
+    // Return only user, no accessToken in body
     res.status(200).json({ user: result.user });
   } catch (error: any) {
     if (error.message === "INVALID_CREDENTIALS") {
@@ -78,26 +87,16 @@ router.post("/logout", async (req, res) => {
 
 // GET /users/me - Get current user (protected route example)
 router.get("/me", authenticateToken, async (req, res) => {
-  res.status(200).json({ user: req.user });
+  return res.status(200).json({ user: req.user });
 });
 
 router.get("/favorites", authenticateToken, async (req, res) => {
   try {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(400).json({
-        error: "USER_ID_MISSING",
-        message: "User ID is missing",
-      });
-    }
-    const favorites = getFavoriteDates(userId);
-    if (favorites === null) {
-      return res.status(404).json({
-        error: "FAVORITES_NOT_FOUND",
-        message: "No favorite dates found for this user",
-      });
-    }
-    res.status(200).json({ favorites });
+    // Clear the cookie
+    res.clearCookie('authToken');
+
+    const result = await logoutService();
+    res.status(200).json(result);
   } catch (error: any) {
     logServerError(req, error, "get_favorites");
     res.status(500).json({
@@ -106,6 +105,28 @@ router.get("/favorites", authenticateToken, async (req, res) => {
   });
   }
 });
+
+router.post("/favorites/add", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    const { dateId } = req.body;
+    if (!userId || !dateId) {
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",  
+        message: "User ID and date ID are required",
+      });
+    }
+    setFavoriteDate(userId, dateId);
+    res.status(200).json({ message: "Favorite date added successfully" });
+  } catch (error: any) {
+    logServerError(req, error, "add_favorite");
+    res.status(500).json({
+      error: "ADD_FAVORITE_FAILED",
+      message: "Failed to add favorite date",
+    });
+  }
+});
+
 
 router.delete("/favorites/remove", authenticateToken, async (req, res) => {
   try {
@@ -128,4 +149,5 @@ router.delete("/favorites/remove", authenticateToken, async (req, res) => {
     });
   }
 });
+
 export default router;

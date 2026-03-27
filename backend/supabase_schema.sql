@@ -8,18 +8,16 @@ create table users (
 );
 
 -- Dates table
-default null,
 create table dates (
   id uuid primary key default gen_random_uuid(),
   type text not null, -- 'venue' or 'non-venue'
   name text not null,
-  location text,
-  avg_cost numeric,
-  recommended_group text,
-  avg_rating numeric,
-  group_size text,
-  icon text, -- url or path to icon/picture
-  description text
+  google_place_id text, -- Google Place ID for venue dates
+  icon text, -- auto-generated emoji
+  description text, -- from Google Places for venues
+  avg_cost numeric, -- calculated from reviews
+  avg_rating numeric, -- calculated from reviews
+  recommended_group text -- calculated from review group_size (single/double/triple+)
 );
 
 -- Ratings table

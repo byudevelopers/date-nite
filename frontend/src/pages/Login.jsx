@@ -16,32 +16,40 @@ function Login() {
     setError('');
 
     const result = await loginUser(email, password);
-    
+
     if (result.success) {
-      // Store the session token (auth data)
+      // Cookie is automatically set by the browser - no localStorage needed!
+      // Just store user info for UI purposes (optional)
       localStorage.setItem('user', JSON.stringify(result.data.user));
       navigate('/home');
     } else {
       setError(result.error || 'Login failed');
     }
-    
+
     setLoading(false);
   };
 
   const handleCreateAccount = async () => {
+    // Validate inputs before sending request
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     const result = await registerUser(email, password);
-    
+
     if (result.success) {
-      // Auto-login after registration
+      // Cookie is automatically set by the browser - no localStorage needed!
+      // Just store user info for UI purposes (optional)
       localStorage.setItem('user', JSON.stringify(result.data.user));
       navigate('/home');
     } else {
       setError(result.error || 'Registration failed');
     }
-    
+
     setLoading(false);
   };
 
@@ -51,31 +59,46 @@ function Login() {
       <div className="formArea">
         <form onSubmit={handleLogin}>
           <div className="emailInput input-group mb-3">
-            <input 
-              className="form-control" 
-              type="email" 
+            <input
+              className="form-control"
+              type="email"
               placeholder="Email"
-              value={email}                           // ← Connect to state
-              onChange={(e) => setEmail(e.target.value)}  // ← Update state on typing
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
               required
             />
           </div>
           <div className="passwordInput input-group mb-3">
-           <input 
-              className="form-control" 
-              type="password" 
+            <input
+              className="form-control"
+              type="password"
               placeholder="Password"
-              value={password}                        // ← Connect to state
-              onChange={(e) => setPassword(e.target.value)} // ← Update state on typing
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
               required
             />
           </div>
+          {error && <p className="error" style={{ color: 'red' }}>{error}</p>}
+          <div className="controlBtns">
+            <button
+              className="submitBtn btn btn-primary"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? 'Loading...' : 'Submit'}
+            </button>
+            <button
+              className="createAccountBtn btn"
+              type="button"
+              onClick={handleCreateAccount}
+              disabled={loading}
+            >
+              Create Account
+            </button>
+          </div>
         </form>
-        {error && <p className="error">{error}</p>}
-        <div className="controlBtns">
-          <button className="submitBtn btn btn-primary" onClick={handleLogin}>Submit</button>
-          <button className="createAccountBtn btn" onClick={handleCreateAccount}>Create Account</button>
-        </div>
       </div>
     </main>
   );
