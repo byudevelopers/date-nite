@@ -7,6 +7,7 @@ import type { LoginDTO } from "@shared/auth.types";
 import { logServerError } from "../utils/errorLogging";
 import { getFavoriteDates } from "../services/userService";
 import { removeFavoriteDate } from "../services/userService";
+import { setFavoriteDate } from "../services/userService";
 
 const router = Router();
 
@@ -78,7 +79,7 @@ router.post("/logout", async (req, res) => {
 
 // GET /users/me - Get current user (protected route example)
 router.get("/me", authenticateToken, async (req, res) => {
-  res.status(200).json({ user: req.user });
+  return res.status(200).json({ user: req.user });
 });
 
 router.get("/favorites", authenticateToken, async (req, res) => {
@@ -107,6 +108,28 @@ router.get("/favorites", authenticateToken, async (req, res) => {
   }
 });
 
+router.post("/favorites/add", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    const { dateId } = req.body;
+    if (!userId || !dateId) {
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",  
+        message: "User ID and date ID are required",
+      });
+    }
+    setFavoriteDate(userId, dateId);
+    res.status(200).json({ message: "Favorite date added successfully" });
+  } catch (error: any) {
+    logServerError(req, error, "add_favorite");
+    res.status(500).json({
+      error: "ADD_FAVORITE_FAILED",
+      message: "Failed to add favorite date",
+    });
+  }
+});
+
+
 router.delete("/favorites/remove", authenticateToken, async (req, res) => {
   try {
     const userId = req.user?.userId;
@@ -128,4 +151,5 @@ router.delete("/favorites/remove", authenticateToken, async (req, res) => {
     });
   }
 });
+
 export default router;

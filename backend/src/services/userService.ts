@@ -28,6 +28,12 @@ export function setFavoriteDate(userId: string, dateId: string) {
   // This function would interact with the database to set a date as favorite for the user
   // For example, it could update the user's profile in the database to include the dateId in their favorites list
   // The actual implementation would depend on how your database and user profiles are structured
+  const user = getUser(userId);
+  if (!user) return false;
+  if (!user.favorites.includes(dateId)) {
+    user.favorites.push(dateId);
+  }
+  return true;
 }
 
 export function getFavoriteDates(userId: string) {
