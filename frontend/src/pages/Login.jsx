@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import React from 'react';
-import App from '../App';
+import { loginUser, registerUser } from '../services/api';
 
 function Login() {
   const navigate = useNavigate();
@@ -19,8 +19,7 @@ function Login() {
     
     if (result.success) {
       // Store the session token (auth data)
-      localStorage.setItem('authToken', result.data.auth.access_token);
-      localStorage.setItem('user', JSON.stringify(result.data.auth.user));
+      localStorage.setItem('user', JSON.stringify(result.data.user));
       navigate('/home');
     } else {
       setError(result.error || 'Login failed');
@@ -37,8 +36,7 @@ function Login() {
     
     if (result.success) {
       // Auto-login after registration
-      localStorage.setItem('authToken', result.data.auth.access_token);
-      localStorage.setItem('user', JSON.stringify(result.data.auth.user));
+      localStorage.setItem('user', JSON.stringify(result.data.user));
       navigate('/home');
     } else {
       setError(result.error || 'Registration failed');
@@ -48,21 +46,35 @@ function Login() {
   };
 
   return (
-    <main className="container-fluid">
+    <main className="login-page">
       <h1>Login to Date-Nite</h1>
       <div className="formArea">
-        <form method="get">
+        <form onSubmit={handleLogin}>
           <div className="emailInput input-group mb-3">
-            <input className="form-control" type="email" placeholder="Email" />
+            <input 
+              className="form-control" 
+              type="email" 
+              placeholder="Email"
+              value={email}                           // ← Connect to state
+              onChange={(e) => setEmail(e.target.value)}  // ← Update state on typing
+              required
+            />
           </div>
           <div className="passwordInput input-group mb-3">
-            <input className="form-control" type="password" placeholder="Password" />
+           <input 
+              className="form-control" 
+              type="password" 
+              placeholder="Password"
+              value={password}                        // ← Connect to state
+              onChange={(e) => setPassword(e.target.value)} // ← Update state on typing
+              required
+            />
           </div>
         </form>
         {error && <p className="error">{error}</p>}
         <div className="controlBtns">
-          <button className="submitBtn btn btn-primary" onClick={() => navigate('/home')}>Submit</button>
-          <button className="createAccountBtn btn" onClick={() => navigate('/home')}>Create Account</button>
+          <button className="submitBtn btn btn-primary" onClick={handleLogin}>Submit</button>
+          <button className="createAccountBtn btn" onClick={handleCreateAccount}>Create Account</button>
         </div>
       </div>
     </main>

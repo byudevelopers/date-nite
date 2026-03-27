@@ -1,19 +1,58 @@
+/* ── Design Tokens ──────────────────────────────────── */
+:root {
+    /* Accent */
+    --color-accent: #c0392b;
+    --color-accent-hover: #a93226;
+    --color-accent-subtle: #fdf0ee;
+    --color-accent-glow: rgba(192, 57, 43, 0.1);
+
+    /* Backgrounds */
+    --color-bg-page: #f7f4f0;
+    --color-bg-surface: #ffffff;
+    --color-bg-surface-hover: #fffaf9;
+    --color-bg-nav: #333333;
+    --color-bg-muted: #f0ebe6;
+
+    /* Borders */
+    --color-border: #e8e0d8;
+    --color-border-input: #d4c8bc;
+    --color-border-subtle: #f0ebe4;
+
+    /* Text */
+    --color-text-primary: #1a1a1a;
+    --color-text-strong: #2c2c2c;
+    --color-text-body: #444444;
+    --color-text-secondary: #666666;
+    --color-text-muted: #888888;
+    --color-text-faint: #bbbbbb;
+    --color-text-placeholder: #b0a49a;
+    --color-text-on-dark: #ffffff;
+    --color-text-dimmed: #555555;
+    --color-text-hint: #999999;
+    --color-text-subtle: #aaaaaa;
+
+    /* Semantic */
+    --color-star: #e67e22;
+    --color-star-empty: #dddddd;
+    --color-overlay: rgba(0, 0, 0, 0.45);
+
+    /* Typography */
+    --font-serif: 'Georgia', serif;
+    --font-sans: 'Arial', sans-serif;
+
+    /* Navbar */
+    --navbar-height: 56px;
+}
+
+/* ── Reset ──────────────────────────────────────────── */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Arial', sans-serif;
+    font-family: var(--font-sans);
 }
 
+/* ── Page Layout ────────────────────────────────────── */
 .page-content {
-    padding: 1rem;
-}
-
-main {
-    flex: 1 calc(100vh - 110px);
-    display: flex;
-    flex-direction: column;
-    text-align: center;
-    align-items: center;
-    justify-content: center;
+    padding-top: var(--navbar-height);
 }
