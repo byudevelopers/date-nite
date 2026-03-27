@@ -22,7 +22,13 @@ function FilterSection({ title, options, selected, onToggle }) {
   );
 }
 
-export default function Sidebar({ filters, onToggle, onClear, filterSections }) {
+const SORT_OPTIONS = [
+  { value: 'top_rated',       label: 'Top rated' },
+  { value: 'most_reviewed',   label: 'Most reviewed' },
+  { value: 'newest_activity', label: 'Newest activity' },
+];
+
+export default function Sidebar({ filters = {}, onToggle, onClear, filterSections = [], sort, onSort }) {
   const navigate = useNavigate();
   const activeFilterCount = Object.values(filters).flat().length;
   const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -45,6 +51,21 @@ export default function Sidebar({ filters, onToggle, onClear, filterSections }) 
       </nav>
 
       <div className="sidebar-sep" />
+
+      {onSort && (
+        <div className="sidebar-sort">
+          <p className="sidebar-sort-label">Sort by</p>
+          {SORT_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              className={`sort-option ${sort === opt.value ? 'active' : ''}`}
+              onClick={() => onSort(opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="sidebar-filters">
         <div className="sidebar-filters-header">

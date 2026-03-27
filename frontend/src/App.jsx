@@ -1,5 +1,5 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Navbar from './pages/components/Navbar';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Sidebar from './pages/components/Sidebar';
 import Login from './pages/Login';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
@@ -11,24 +11,30 @@ function PrivateRoute({ children }) {
   return localStorage.getItem('user') ? children : <Navigate to="/" />;
 }
 
-function App() {
-  const location = useLocation();
-
+function PageShell({ title, children }) {
   return (
-    <>
-      {/* Navbar temporarily removed — navigation moved to sidebar */}
-      {/* {location.pathname !== '/' && <Navbar />} */}
-      <main className="page-content page-content--no-nav">
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
-          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-          <Route path="/favorites" element={<PrivateRoute><Favorites /></PrivateRoute>} />
-          <Route path="/create-date" element={<PrivateRoute><CreateDate /></PrivateRoute>} />
-          {import.meta.env.DEV ? <Route path="/dev" element={<DevTools />} /> : null}
-        </Routes>
-      </main>
-    </>
+    <div className="app-shell">
+      <Sidebar />
+      <div className="app-right">
+        <header className="app-header">
+          <span className="app-header-title">{title}</span>
+        </header>
+        <div className="app-content">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
+      <Route path="/profile" element={<PrivateRoute><PageShell title="Profile"><Profile /></PageShell></PrivateRoute>} />
+      <Route path="/favorites" element={<PrivateRoute><PageShell title="Favorites"><Favorites /></PageShell></PrivateRoute>} />
+      <Route path="/create-date" element={<PrivateRoute><PageShell title="Create Date"><CreateDate /></PageShell></PrivateRoute>} />
+      {import.meta.env.DEV && <Route path="/dev" element={<PageShell title="Dev Tools"><DevTools /></PageShell>} />}
+    </Routes>
   );
 }
 
