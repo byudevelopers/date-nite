@@ -20,7 +20,7 @@ export function authenticateToken(
   if (!token) {
     return res.status(401).json({
       error: 'UNAUTHORIZED',
-      message: 'Access token required'
+      message: 'Authentication required - please login'
     });
   }
 

@@ -22,13 +22,17 @@ router.post("/", async (req, res) => {
   }
   try {
     const result = await registerUserService({ email, password });
+
+    // Set HttpOnly cookie
     res.cookie('authToken', result.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
     });
-    res.status(201).json(result);
+
+    // Return only user, no accessToken in body
+    res.status(201).json({ user: result.user });
   } catch (error: any) {
     logServerError(req, error, "register_user");
     res.status(500).json({
@@ -49,12 +53,16 @@ router.post("/login", async (req, res) => {
   }
   try {
     const result = await loginService({ email, password });
+
+    // Set HttpOnly cookie
     res.cookie('authToken', result.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
     });
+
+    // Return only user, no accessToken in body
     res.status(200).json({ user: result.user });
   } catch (error: any) {
     if (error.message === "INVALID_CREDENTIALS") {
@@ -84,21 +92,11 @@ router.get("/me", authenticateToken, async (req, res) => {
 
 router.get("/favorites", authenticateToken, async (req, res) => {
   try {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(400).json({
-        error: "USER_ID_MISSING",
-        message: "User ID is missing",
-      });
-    }
-    const favorites = getFavoriteDates(userId);
-    if (favorites === null) {
-      return res.status(404).json({
-        error: "FAVORITES_NOT_FOUND",
-        message: "No favorite dates found for this user",
-      });
-    }
-    res.status(200).json({ favorites });
+    // Clear the cookie
+    res.clearCookie('authToken');
+
+    const result = await logoutService();
+    res.status(200).json(result);
   } catch (error: any) {
     logServerError(req, error, "get_favorites");
     res.status(500).json({

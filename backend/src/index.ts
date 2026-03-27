@@ -21,6 +21,7 @@ app.use(cors({
 
 app.use(cookieParser());
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/", (_req, res) => {
   res.status(200).json({
