@@ -41,7 +41,7 @@ describe("Authentication Endpoints", () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty("user");
-      expect(res.body).toHaveProperty("accessToken");
+      expect(res.body).toHaveProperty("authToken");
       expect(res.body.user.email).toBe(testEmail);
     });
 

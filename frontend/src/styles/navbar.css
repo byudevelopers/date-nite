@@ -1,9 +1,15 @@
 .navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 1rem;
-    background-color: #333;
+    background-color: var(--color-bg-nav);
+    height: var(--navbar-height);
 }
 
 .navbar-nav {
@@ -15,8 +21,26 @@
     padding: 0;
 }
 
+.navbar-brand {
+    font-family: var(--font-serif);
+}
+
 .navbar a {
-    color: white;
+    color: var(--color-text-on-dark);
     text-decoration: none;
     margin-left: 1rem;
+}
+
+.nav-link {
+    color: var(--color-text-on-dark);
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: color 0.2s ease-in-out;
+}
+
+.nav-link--dev {
+    color: var(--color-text-subtle);
+    font-size: 1rem;
+    line-height: 1;
 }

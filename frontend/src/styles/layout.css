@@ -1,0 +1,133 @@
+/* ── Home Layout ────────────────────────────────────── */
+.home-layout {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--navbar-height));
+    background: var(--color-bg-page);
+    font-family: var(--font-serif);
+    overflow: hidden;
+}
+
+/* ── Search Bar ─────────────────────────────────────── */
+.search-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    background: var(--color-bg-surface);
+    border-bottom: 2px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.search-bar {
+    flex: 1;
+    max-width: 700px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    background: var(--color-bg-page);
+    border: 2px solid var(--color-border-input);
+    border-radius: 12px;
+    padding: 10px 16px;
+    gap: 10px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-bar:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+
+.search-icon {
+    font-size: 16px;
+    opacity: 0.5;
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 15px;
+    font-family: var(--font-serif);
+    color: var(--color-text-strong);
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: var(--color-text-placeholder);
+}
+
+.search-clear {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-hint);
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.15s;
+}
+
+.search-clear:hover {
+    color: var(--color-accent);
+}
+
+.search-btn {
+    padding: 10px 22px;
+    background: var(--color-text-strong);
+    color: var(--color-text-on-dark);
+    border: none;
+    border-radius: 12px;
+    font-family: var(--font-serif);
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.search-btn:hover {
+    background: var(--color-accent);
+}
+
+/* ── Body ───────────────────────────────────────────── */
+.home-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ── Cards Area ─────────────────────────────────────── */
+.cards-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 0;
+}
+
+.cards-inner {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.results-header {
+    margin-bottom: 16px;
+}
+
+.results-count {
+    font-size: 13px;
+    color: var(--color-text-hint);
+    font-family: var(--font-sans);
+    letter-spacing: 0.5px;
+}
+
+.cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── Page Content offset for fixed navbar ───────────── */
+.page-content {
+    padding-top: var(--navbar-height);
+}
