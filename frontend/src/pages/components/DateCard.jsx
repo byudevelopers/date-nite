@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
-function StarRating({ rating }) {
+export function StarRating({ rating }) {
   return (
     <div className="star-rating">
       {[1, 2, 3, 4, 5].map(i => (
@@ -11,34 +11,87 @@ function StarRating({ rating }) {
   );
 }
 
-export { StarRating };
-
-export default function DateCard({ date, onClick }) {
+export default function DateCard({ date, onClick, isSaved, onSave }) {
+  const [expanded, setExpanded] = useState(false);
+  const [isClamped, setIsClamped] = useState(false);
+  const descRef = useRef(null);
   const isVenue = date.type === 'venue';
-  const typeEmoji = isVenue ? '📍' : '🏠';
+
+  useEffect(() => {
+    const el = descRef.current;
+    if (el) {
+      setIsClamped(el.scrollHeight > el.clientHeight);
+    }
+  }, [date.description]);
+
+  const hasRatings = date.rating_count > 0;
+  const isFirstDateFriendly = hasRatings && date.first_date_count > date.rating_count / 2;
 
   return (
     <div className="date-card" onClick={() => onClick(date)}>
-      <div className="card-left">
-        <div className="card-icon">{date.icon || typeEmoji}</div>
-      </div>
       <div className="card-body">
-        <div className="card-top-row">
-          <h3 className="card-title">{date.name}</h3>
-          <span className="card-cost">{date.avg_cost ? `$${date.avg_cost}` : 'Free'}</span>
-        </div>
-        <p className="card-description">{date.description}</p>
-        <div className="card-bottom-row">
-          <div className="card-tags">
-            {date.recommended_group && (
-              <span className="tag">#{date.recommended_group}</span>
-            )}
+
+        {/* Title row */}
+        <div className="card-header-row">
+          <div className="card-title-group">
+            <span className="card-icon-inline">{date.icon || (isVenue ? '📍' : '🏠')}</span>
+            <h3 className="card-title">{date.name}</h3>
           </div>
-          <div className="card-meta-right">
-            <StarRating rating={date.avg_rating ?? 0} />
-            <span className="card-type-badge">{isVenue ? 'Venue' : 'At-home'}</span>
-          </div>
+          {onSave && (
+            <button
+              className={`card-save-btn ${isSaved ? 'saved' : ''}`}
+              onClick={e => { e.stopPropagation(); onSave(date.id); }}
+              aria-label={isSaved ? 'Unsave' : 'Save'}
+            >
+              {isSaved ? '♥' : '♡'}
+            </button>
+          )}
         </div>
+
+        {/* Description + read more */}
+        <p ref={descRef} className={`card-description ${expanded ? 'expanded' : ''}`}>
+          {date.description}
+        </p>
+        {(isClamped || expanded) && (
+          <button
+            className="card-read-more"
+            onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+          >
+            {expanded ? 'read less' : 'read more'}
+          </button>
+        )}
+
+        {/* Badge row */}
+        <div className="card-badges">
+          <span className={`card-badge ${isVenue ? 'card-badge--venue' : 'card-badge--home'}`}>
+            {isVenue ? '📍 Venue' : '🏠 At-home'}
+          </span>
+
+          {date.avg_cost > 0 && (
+            <span className="card-badge card-badge--stat">
+              ${Math.round(date.avg_cost)}
+            </span>
+          )}
+
+          {hasRatings && (
+            <span className="card-badge card-badge--stat">
+              {date.avg_rating?.toFixed(1)} ★ &middot; {date.rating_count} {date.rating_count === 1 ? 'rating' : 'ratings'}
+            </span>
+          )}
+
+          {hasRatings && (
+            <span className="card-badge card-badge--recommend">
+              {date.percent_recommended}% recommend
+            </span>
+          )}
+
+          {isFirstDateFriendly && (
+            <span className="card-badge card-badge--first-date">
+              🎯 Great for first dates
+            </span>
+          )}
+        </div>
+
       </div>
     </div>
   );

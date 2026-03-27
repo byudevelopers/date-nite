@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DateCard, { StarRating } from './components/DateCard';
 import SearchBar from './components/SearchBar';
 import Sidebar from './components/Sidebar';
-import { getDates } from '../services/api';
+import { getDates, getFavorites, addFavorite, removeFavorite } from '../services/api';
 
 const FILTER_SECTIONS = [
   { title: 'Date Type', key: 'type', options: ['Venue', 'At-home'] },
@@ -47,8 +47,9 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [filters, setFilters] = useState({ type: [], cost: [] });
+  const [sort, setSort] = useState('top_rated');
+  const [savedIds, setSavedIds] = useState(new Set());
 
   useEffect(() => {
     async function fetchDates() {
@@ -61,6 +62,14 @@ export default function Home() {
       setLoading(false);
     }
     fetchDates();
+  }, []);
+
+  useEffect(() => {
+    getFavorites().then(res => {
+      if (res?.data?.favorites) {
+        setSavedIds(new Set(res.data.favorites.map(d => d.id)));
+      }
+    });
   }, []);
 
   function toggleFilter(category, value) {
@@ -76,6 +85,23 @@ export default function Home() {
     setFilters({ type: [], cost: [] });
   }
 
+  async function handleSave(dateId) {
+    const isCurrentlySaved = savedIds.has(dateId);
+    setSavedIds(prev => {
+      const next = new Set(prev);
+      isCurrentlySaved ? next.delete(dateId) : next.add(dateId);
+      return next;
+    });
+    const result = isCurrentlySaved ? await removeFavorite(dateId) : await addFavorite(dateId);
+    if (!result.success) {
+      setSavedIds(prev => {
+        const next = new Set(prev);
+        isCurrentlySaved ? next.add(dateId) : next.delete(dateId);
+        return next;
+      });
+    }
+  }
+
   const filtered = dates.filter(d => {
     if (search && !d.name.toLowerCase().includes(search.toLowerCase()) &&
         !d.description?.toLowerCase().includes(search.toLowerCase())) return false;
@@ -86,63 +112,78 @@ export default function Home() {
     return true;
   });
 
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === 'top_rated')     return (b.avg_rating ?? 0) - (a.avg_rating ?? 0);
+    if (sort === 'most_reviewed') return (b.rating_count ?? 0) - (a.rating_count ?? 0);
+    if (sort === 'newest_activity') {
+      if (!a.latest_rating_at && !b.latest_rating_at) return 0;
+      if (!a.latest_rating_at) return 1;
+      if (!b.latest_rating_at) return -1;
+      return new Date(b.latest_rating_at) - new Date(a.latest_rating_at);
+    }
+    return 0;
+  });
+
   return (
-    <div className="home-layout">
-      <SearchBar
-        value={search}
-        onChange={setSearch}
-        onClear={() => setSearch('')}
-        placeholder="Search date ideas..."
+    <div className="app-shell">
+      <Sidebar
+        filters={filters}
+        onToggle={toggleFilter}
+        onClear={clearFilters}
+        filterSections={FILTER_SECTIONS}
+        sort={sort}
+        onSort={setSort}
       />
+      <div className="app-right">
+        <header className="app-header">
+          <span className="app-header-title">Home</span>
+        </header>
+        <div className="app-content">
+          <div className="home-main">
+            <SearchBar
+              value={search}
+              onChange={setSearch}
+              onClear={() => setSearch('')}
+              placeholder="Search date ideas..."
+            />
 
-      <div className="home-body">
-        {!sidebarOpen && (
-          <button className="sidebar-reopen-btn" onClick={() => setSidebarOpen(true)}>
-            ▶ Filters
-          </button>
-        )}
-
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          filters={filters}
-          onToggle={toggleFilter}
-          onClear={clearFilters}
-          filterSections={FILTER_SECTIONS}
-        />
-
-        <main className="cards-area">
-          <div className="cards-inner">
-            {loading ? (
-              <div className="empty-state"><p>Loading dates...</p></div>
-            ) : error ? (
-              <div className="empty-state"><p>Couldn't load dates. Is the backend running?</p></div>
-            ) : (
-              <>
-                <div className="results-header">
-                  <span className="results-count">
-                    {filtered.length} date{filtered.length !== 1 ? 's' : ''} found
-                  </span>
-                </div>
-                {filtered.length === 0 ? (
-                  <div className="empty-state">
-                    <p>No dates match your filters.</p>
-                    <button onClick={clearFilters} className="clear-btn-lg">Clear filters</button>
-                  </div>
+            <main className="cards-area">
+              <div className="cards-inner">
+                {loading ? (
+                  <div className="empty-state"><p>Loading dates...</p></div>
+                ) : error ? (
+                  <div className="empty-state"><p>Couldn't load dates. Is the backend running?</p></div>
                 ) : (
-                  <div className="cards-grid">
-                    {filtered.map(date => (
-                      <DateCard key={date.id} date={date} onClick={setSelectedDate} />
-                    ))}
-                  </div>
+                  <>
+                    <div className="results-header">
+                      <span className="results-count">
+                        {sorted.length} date{sorted.length !== 1 ? 's' : ''} found
+                      </span>
+                    </div>
+                    {sorted.length === 0 ? (
+                      <p className="no-results-text">No dates match your filters.</p>
+                    ) : (
+                      <div className="cards-grid">
+                        {sorted.map(date => (
+                          <DateCard
+                            key={date.id}
+                            date={date}
+                            onClick={setSelectedDate}
+                            isSaved={savedIds.has(date.id)}
+                            onSave={handleSave}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
-              </>
-            )}
+              </div>
+            </main>
           </div>
-        </main>
-      </div>
 
-      <DateInfoModal date={selectedDate} onClose={() => setSelectedDate(null)} />
+          <DateInfoModal date={selectedDate} onClose={() => setSelectedDate(null)} />
+        </div>
+      </div>
     </div>
   );
 }

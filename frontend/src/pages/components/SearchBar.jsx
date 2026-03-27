@@ -16,7 +16,6 @@ export default function SearchBar({ value, onChange, onClear, placeholder = 'Sea
           <button className="search-clear" onClick={onClear}>✕</button>
         )}
       </div>
-      <button className="search-btn">Search</button>
     </div>
   );
 }

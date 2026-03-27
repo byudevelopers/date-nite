@@ -1,4 +1,4 @@
-import { getDate, getAllDates, createDate } from "../database";
+import { getDate, getAllDatesWithStats, createDate } from "../database";
 import { fetchGooglePlace } from "./googlePlacesService";
 import { generateIcon } from "../utils/iconGenerator";
 import type {
@@ -13,15 +13,9 @@ export function fetchDateById(id: string) {
   return getDate(id);
 }
 
-// get all dates
-export function fetchAllDates() {
-  return getAllDates();
-}
-
-// return all dates
+// return all dates with aggregated rating stats
 export function getDateService() {
-  const dates = fetchAllDates();
-  return dates;
+  return getAllDatesWithStats();
 }
 
 // Create new date idea
