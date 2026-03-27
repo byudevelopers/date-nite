@@ -87,6 +87,8 @@ The backend follows a layered architecture separating concerns:
    - Exports configured database instance with auto-creation of tables on startup
    - Contains low-level CRUD functions for users, dates, and ratings tables
    - Functions throw errors on failure (no error wrapping here)
+   - Important: `createUser()` expects pre-hashed passwords
+   - Rating helper functions: `getRatingsByDateId()` for aggregate calculations, `getRecentRatingByUser()` for cooldown checks
 
 2. **services/** - Business logic layer
    - `userService.ts`: User registration and favorite date operations
@@ -165,6 +167,26 @@ POST /users/logout -b cookies.txt
 
 **Frontend API Pattern:** Frontend uses `credentials: 'include'` in fetch requests for cookie-based auth.
 
+*Create Rating:*
+```bash
+curl -X POST http://localhost:3000/ratings \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date_id": "date-uuid",
+    "romance_level": "romantic",
+    "group_size": "double",
+    "cost": 50.00,
+    "good_bad": "good",
+    "first_date": true
+  }'
+```
+
+*Get Rating Averages (with filters):*
+```bash
+curl "http://localhost:3000/ratings/averages/date-uuid?romance_level=romantic&group_size=double&first_date=true"
+```
+
 ### Shared Types (DTOs)
 
 Located in `/shared/types/`, these TypeScript interfaces are used by both frontend and backend:
@@ -172,10 +194,26 @@ Located in `/shared/types/`, these TypeScript interfaces are used by both fronte
 **User Types:** User, RegisterUserDTO, RegisterResponseDTO
 **Auth Types:** LoginDTO, LoginResponseDTO, LogoutResponseDTO, JWTPayload, AuthErrorCode
 
+**Date Types** (`date.types.ts`):
+- `Date` - Date idea entity
+- `GooglePlace` - Google Place data structure
+- `PlacesSearchResponseDTO` - Response from place search
+- `CreateDateDTO` - Date creation request (includes google_place_id for venue dates)
+- `CreateDateResponseDTO` - Date creation response
+- `DateErrorCode` - Standard error codes (PLACE_NOT_FOUND, PLACES_API_ERROR, etc.)
+
+**Rating Types** (`rating.types.ts`):
+- `Rating` - Rating entity with id, user_id, date_id, romance_level, group_size, cost, good_bad, first_date, created_at
+- `CreateRatingDTO` - Rating creation request (all fields required except review)
+- `CreateRatingResponseDTO` - Rating creation response
+- `RatingAveragesDTO` - Aggregate statistics with filters applied
+- `RatingErrorCode` - Standard error codes (VALIDATION_ERROR, DATE_NOT_FOUND, DUPLICATE_RATING_COOLDOWN, etc.)
+
 **Backend Import:**
 ```typescript
 import type { RegisterUserDTO } from "@shared/user.types";
 import type { LoginDTO } from "@shared/auth.types";
+import type { CreateRatingDTO, RatingAveragesDTO } from "@shared/rating.types";
 ```
 
 Backend tsconfig.json includes path mapping: `"@shared/*": ["../shared/types/*"]`
@@ -300,9 +338,31 @@ Backend requires `JWT_SECRET` and `JWT_EXPIRES_IN` (default: "7d") in `backend/.
 - Access authenticated user via `req.user` (populated from cookie by middleware)
 - Return standardized error codes for auth failures
 
+**Google Places integration patterns:**
+- For venue dates, require `google_place_id` in CreateDateDTO
+- Use `searchGooglePlaces()` to find places before date creation
+- `fetchGooglePlace()` retrieves details for a specific place_id
+- Handle `PLACES_API_ERROR` (503) when Google API is unavailable
+- Store `google_place_id` in dates table for future reference
+- Icon generation happens automatically via `iconGenerator` utility
+
+**Rating patterns:**
+- Ratings require authentication (use `authenticateToken` middleware)
+- 24-hour cooldown enforced: users can only rate each date once per 24 hours
+- `first_date` field is boolean in API/DTOs but stored as INTEGER (0/1) in SQLite
+- Service layer automatically converts boolean to 0/1 when creating, and back to boolean in response
+- Creating a rating automatically recalculates and updates `avg_cost` and `avg_rating` on the dates table
+- `avg_rating` is percentage: (count of good ratings / total ratings) * 100
+- Use `getAveragesForDate()` with optional filters (romance_level, group_size, first_date) for aggregate statistics
+- Return 429 status code for `DUPLICATE_RATING_COOLDOWN` errors
+- `created_at` stored as ISO 8601 string (use `new Date().toISOString()`)
+- Database helper `getRecentRatingByUser()` checks for ratings within specified hours using SQLite datetime functions
+
 **Testing patterns:**
 - Use unique emails with timestamps to avoid conflicts: `` `test_${Date.now()}@example.com` ``
+- For rating tests, create unique dates for each test to avoid 24-hour cooldown conflicts
 - Test both success and error cases
 - Test validation errors (400 responses)
 - Test authentication errors (401/403 responses)
 - For protected routes, test both with and without valid tokens
+- Test rate limiting (429 responses for ratings within 24-hour window)
