@@ -16,8 +16,9 @@ function App() {
 
   return (
     <>
-      {location.pathname !== '/' && <Navbar />}
-      <main className="page-content">
+      {/* Navbar temporarily removed — navigation moved to sidebar */}
+      {/* {location.pathname !== '/' && <Navbar />} */}
+      <main className="page-content page-content--no-nav">
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />

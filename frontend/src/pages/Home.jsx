@@ -47,7 +47,6 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [filters, setFilters] = useState({ type: [], cost: [] });
 
   useEffect(() => {
@@ -88,27 +87,19 @@ export default function Home() {
 
   return (
     <div className="home-layout">
-      <SearchBar
-        value={search}
-        onChange={setSearch}
-        onClear={() => setSearch('')}
-        placeholder="Search date ideas..."
+      <Sidebar
+        filters={filters}
+        onToggle={toggleFilter}
+        onClear={clearFilters}
+        filterSections={FILTER_SECTIONS}
       />
 
-      <div className="home-body">
-        {!sidebarOpen && (
-          <button className="sidebar-reopen-btn" onClick={() => setSidebarOpen(true)}>
-            ▶ Filters
-          </button>
-        )}
-
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          filters={filters}
-          onToggle={toggleFilter}
-          onClear={clearFilters}
-          filterSections={FILTER_SECTIONS}
+      <div className="home-main">
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          onClear={() => setSearch('')}
+          placeholder="Search date ideas..."
         />
 
         <main className="cards-area">
