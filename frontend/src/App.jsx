@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Favorites from './pages/Favorites';
 import DevTools from './pages/DevTools';
+import CreateDate from './pages/CreateDate';
 
 function PrivateRoute({ children }) {
   return localStorage.getItem('user') ? children : <Navigate to="/" />;
@@ -22,6 +23,7 @@ function App() {
           <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
           <Route path="/favorites" element={<PrivateRoute><Favorites /></PrivateRoute>} />
+          <Route path="/create-date" element={<PrivateRoute><CreateDate /></PrivateRoute>} />
           {import.meta.env.DEV ? <Route path="/dev" element={<DevTools />} /> : null}
         </Routes>
       </main>

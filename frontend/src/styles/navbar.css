@@ -39,6 +39,15 @@
     transition: color 0.2s ease-in-out;
 }
 
+.nav-link--create {
+    color: var(--color-accent) !important;
+    font-weight: 600;
+}
+
+.nav-link--create:hover {
+    color: #e74c3c !important;
+}
+
 .nav-link--dev {
     color: var(--color-text-subtle);
     font-size: 1rem;

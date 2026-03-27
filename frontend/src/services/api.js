@@ -74,3 +74,13 @@ export async function logoutUser() {
 export async function getDates() {
   return apiFetch('/dates');
 }
+
+/**
+ * Create a new date idea
+ */
+export async function createDate(data) {
+  return apiFetch('/dates', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
