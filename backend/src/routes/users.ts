@@ -1,9 +1,13 @@
 import { Router } from "express";
 import { registerUserService } from "../services/userService";
-import { loginService, logoutService } from "../services/authService";
+import { loginService } from "../services/authService";
 import { authenticateToken } from "../middleware/auth";
 import type { RegisterUserDTO } from "@shared/user.types";
 import type { LoginDTO } from "@shared/auth.types";
+import { logServerError } from "../utils/errorLogging";
+import { getFavoriteDates } from "../services/userService";
+import { removeFavoriteDate } from "../services/userService";
+import { setFavoriteDate } from "../services/userService";
 
 const router = Router();
 
@@ -30,6 +34,7 @@ router.post("/", async (req, res) => {
     // Return only user, no accessToken in body
     res.status(201).json({ user: result.user });
   } catch (error: any) {
+    logServerError(req, error, "register_user");
     res.status(500).json({
       error: "REGISTRATION_FAILED",
       message: error.message || "Failed to register user",
@@ -66,6 +71,7 @@ router.post("/login", async (req, res) => {
         message: "Invalid email or password",
       });
     }
+    logServerError(req, error, "login_user");
     res.status(500).json({
       error: "LOGIN_FAILED",
       message: "Login failed",
@@ -73,8 +79,18 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// POST /users/logout - Logout (requires auth)
-router.post("/logout", authenticateToken, async (req, res) => {
+// POST /users/logout - Logout
+router.post("/logout", async (req, res) => {
+  res.clearCookie('authToken');
+  res.status(200).json({ message: 'Logged out successfully' });
+});
+
+// GET /users/me - Get current user (protected route example)
+router.get("/me", authenticateToken, async (req, res) => {
+  return res.status(200).json({ user: req.user });
+});
+
+router.get("/favorites", authenticateToken, async (req, res) => {
   try {
     // Clear the cookie
     res.clearCookie('authToken');
@@ -82,16 +98,56 @@ router.post("/logout", authenticateToken, async (req, res) => {
     const result = await logoutService();
     res.status(200).json(result);
   } catch (error: any) {
+    logServerError(req, error, "get_favorites");
     res.status(500).json({
-      error: "LOGOUT_FAILED",
-      message: error.message || "Logout failed",
+    error: "GET_FAVORITES_FAILED",
+    message: "Failed to get favorite dates",
+  });
+  }
+});
+
+router.post("/favorites/add", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    const { dateId } = req.body;
+    if (!userId || !dateId) {
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",  
+        message: "User ID and date ID are required",
+      });
+    }
+    setFavoriteDate(userId, dateId);
+    res.status(200).json({ message: "Favorite date added successfully" });
+  } catch (error: any) {
+    logServerError(req, error, "add_favorite");
+    res.status(500).json({
+      error: "ADD_FAVORITE_FAILED",
+      message: "Failed to add favorite date",
     });
   }
 });
 
-// GET /users/me - Get current user (protected route example)
-router.get("/me", authenticateToken, async (req, res) => {
-  res.status(200).json({ user: req.user });
+
+router.delete("/favorites/remove", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    const { dateId } = req.body;
+    if (!userId || !dateId) {
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",
+        message: "User ID and date ID are required",
+      });
+    }
+    removeFavoriteDate(userId, dateId);
+    res.status(200).json({ message: "Favorite date removed successfully" });
+
+  } catch (error: any) {
+    logServerError(req, error, "remove_favorite");
+    res.status(500).json({
+      error: "REMOVE_FAVORITE_FAILED",
+      message: "Failed to remove favorite date",
+    });
+  }
 });
 
 export default router;

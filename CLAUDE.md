@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Date Nite is a community-driven date idea rating application for university students (starting with BYU). Users can submit, rate, and discover date ideas based on community feedback. The application uses a REST API architecture with React frontend and Node.js/Express backend backed by SQLite.
+Date Nite is a community-driven date idea rating application for university students (starting with BYU). Users can submit, rate, and discover date ideas based on community feedback. The application uses a REST API architecture with React frontend and Node.js/Express backend backed by SQLite, with JWT-based authentication.
 
 ## Development Commands
 
@@ -51,95 +51,89 @@ This repository contains both frontend and backend in separate directories at th
 - `/shared` - Shared TypeScript types/DTOs used by both frontend and backend
 - Root `vite.config.js` points to `/frontend` as root directory
 
+### Project File Structure
+```
+date-nite/
+├── frontend/
+│   ├── src/
+│   │   ├── pages/ (Home, Login, DevTools, Favorites*, Profile*, DateInfo*)
+│   │   │   └── components/ (Navbar, DateCard, Sidebar, SearchBar)
+│   │   ├── services/ (api.js)
+│   │   ├── styles/ (9 CSS files)
+│   │   ├── main.jsx
+│   │   └── App.jsx
+│   └── package.json
+├── backend/
+│   ├── src/
+│   │   ├── routes/ (users.ts, dates.ts, health.ts)
+│   │   ├── services/ (userService, authService, dateService)
+│   │   ├── middleware/ (auth, errorHandler)
+│   │   ├── utils/ (jwt, errorLogging)
+│   │   ├── database.ts
+│   │   └── index.ts
+│   └── config files (package.json, tsconfig.json, jest.config.js)
+├── shared/types/ (user.types, auth.types, index)
+├── date-nite.db (gitignored, created at runtime)
+└── config files (package.json, vite.config.js, CLAUDE.md)
+
+* = placeholder/incomplete
+```
+
 ### Backend Architecture (Service-Route Pattern)
 
 The backend follows a layered architecture separating concerns:
 
 1. **database.ts** - SQLite database operations using better-sqlite3
-   - Database file location: `date-nite.db` in project root
-   - Initializes schema on startup (creates tables if not exist)
+   - Exports configured database instance with auto-creation of tables on startup
    - Contains low-level CRUD functions for users, dates, and ratings tables
    - Functions throw errors on failure (no error wrapping here)
    - Important: `createUser()` expects pre-hashed passwords
    - Rating helper functions: `getRatingsByDateId()` for aggregate calculations, `getRecentRatingByUser()` for cooldown checks
 
 2. **services/** - Business logic layer
-   - `userService.ts`: Handles user registration with bcrypt password hashing (10 rounds), generates UUIDs with crypto.randomUUID(), returns JWT token
-   - `authService.ts`: Handles login/logout operations, verifies passwords with bcrypt.compare(), generates JWT tokens
-   - `dateService.ts`: Date idea business logic including fetchDateById(), fetchAllDates(), createDateService() with Google Places integration for venue dates and automatic icon generation
-   - `googlePlacesService.ts`: Google Places API integration with searchGooglePlaces() (Text Search API v1) and fetchGooglePlace() (Place Details), returns place data including name, address, types, editorial summary, rating, and price level
-   - `ratingService.ts`: Rating business logic including createRatingService() with 24-hour cooldown enforcement and automatic date average updates, and getAveragesForDate() for filtered aggregate statistics
+   - `userService.ts`: User registration and favorite date operations
+   - `authService.ts`: Login, JWT generation, cookie handling
+   - `dateService.ts`: Date idea business logic
    - Services orchestrate multiple database calls and apply business rules
    - All service functions use DTOs from `/shared/types` for type safety
 
 3. **routes/** - HTTP request handling
-   - `users.ts`: User authentication endpoints:
-     - `POST /users` - User registration (returns user + JWT)
-     - `POST /users/login` - User login (returns user + JWT)
-     - `POST /users/logout` - User logout (requires authentication)
-     - `GET /users/me` - Get current authenticated user (protected route example)
-   - `dates.ts`: Date endpoints:
-     - `GET /dates` - Fetch all date ideas
-     - `GET /dates/search-places?query=&location=` - Search Google Places (no auth required)
-     - `POST /dates` - Create new date idea (requires authentication, integrates with Google Places for venue dates)
-   - `ratings.ts`: Rating endpoints:
-     - `POST /ratings` - Create new rating (requires authentication, enforces 24-hour cooldown, auto-updates date averages)
-     - `GET /ratings/averages/:dateId` - Get filtered aggregate statistics (public, supports romance_level, group_size, first_date filters)
-   - `health.ts`: Health check endpoint (`GET /health`)
-   - Routes validate request bodies and call service functions
-   - Returns standardized error codes (e.g., `VALIDATION_ERROR`, `INVALID_CREDENTIALS`)
-   - Returns appropriate HTTP status codes (201 for creation, 400 for validation errors, 401 for auth errors, 429 for rate limiting, 500 for server errors)
+   - `users.ts`: User authentication (register, login, logout, /me) and favorites (get, remove)
+   - `dates.ts`: Date ideas (get all)
+   - `health.ts`: Health check
+   - Routes validate requests, return standardized errors, appropriate HTTP status codes
 
 4. **index.ts** - Express app setup
-   - Mounts routers (`/users`, `/dates`, `/ratings`, `/health`)
-   - CORS middleware configured for frontend origin
-   - JSON body parsing middleware
+   - Mounts routers (`/users`, `/health`)
+   - CORS middleware configured for frontend origin with credentials support
+   - JSON body parsing and cookie parser middleware
    - Server listening on port 3000
 
 5. **middleware/** - Request processing middleware
    - `auth.ts`: JWT token verification middleware
-     - `authenticateToken()` - Validates JWT from `Authorization: Bearer <token>` header
+     - `authenticateToken()` - Validates JWT from httpOnly cookie
      - Adds decoded user payload to `req.user` for use in route handlers
      - Returns 401 for missing/expired tokens, 403 for invalid tokens
+   - `errorHandler.ts`: Global error handling middleware (available but not currently mounted)
 
 6. **utils/** - Utility functions
    - `jwt.ts`: JWT token signing and verification
-     - `signToken()` - Creates JWT with user ID and email
+     - `signToken()` - Creates JWT with user ID and email (7-day expiration)
      - `verifyToken()` - Validates and decodes JWT tokens
-   - `iconGenerator.ts`: Emoji icon generation for date ideas
-     - Maps keywords (name and Google Place types) to appropriate emojis
-     - Default emoji: ❤️
+   - `errorLogging.ts`: Error logging utility
+     - `logServerError()` - Structured error logging with timestamp and context
 
 ### Authentication & JWT
 
-The application uses local JWT-based authentication with bcrypt password hashing:
+The application uses cookie-based JWT authentication with bcrypt password hashing:
 
 **Token Flow:**
-1. User registers with email/password
-2. Backend hashes password with bcrypt (10 rounds)
-3. Backend stores user with hashed password in SQLite
-4. Backend generates custom JWT token (7-day expiration)
-5. Frontend stores JWT in localStorage
-6. Frontend includes JWT in `Authorization: Bearer <token>` header
-7. Backend middleware validates JWT
+1. User registers/logs in via backend API
+2. Backend validates credentials (bcrypt) and generates JWT (7-day expiration)
+3. JWT stored in httpOnly cookie; user object in localStorage
+4. Browser sends cookie automatically; middleware validates JWT
 
-**Password Security:**
-- Registration: Passwords hashed with `bcrypt.hash(password, 10)` before storage
-- Login: Passwords verified with `bcrypt.compare(password, stored_hash)`
-- Passwords never stored in plaintext
-- User IDs are UUIDs generated with `crypto.randomUUID()` (not from external auth service)
-
-**Response Format:**
-```typescript
-{
-  user: {
-    id: string,
-    email: string,
-    favorites: string[]
-  },
-  accessToken: string  // JWT token
-}
-```
+**Response Format:** See Shared Types section for RegisterResponseDTO/LoginResponseDTO structure.
 
 **Error Codes:**
 - `VALIDATION_ERROR` (400) - Missing required fields
@@ -160,32 +154,18 @@ router.get("/me", authenticateToken, async (req, res) => {
 ```
 
 **API Usage Examples:**
-
-*Registration:*
 ```bash
-curl -X POST http://localhost:3000/users \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"password123"}'
+# Registration (sets httpOnly cookie)
+curl -X POST http://localhost:3000/users -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}' -c cookies.txt
+
+# Login, protected routes, and logout use -c (set cookie) or -b (use cookie)
+POST /users/login -d '{"email":"...","password":"..."}' -c cookies.txt
+GET /users/me -b cookies.txt
+POST /users/logout -b cookies.txt
 ```
 
-*Login:*
-```bash
-curl -X POST http://localhost:3000/users/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"password123"}'
-```
-
-*Protected Route (with token):*
-```bash
-curl http://localhost:3000/users/me \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-*Logout:*
-```bash
-curl -X POST http://localhost:3000/users/logout \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
+**Frontend API Pattern:** Frontend uses `credentials: 'include'` in fetch requests for cookie-based auth.
 
 *Create Rating:*
 ```bash
@@ -211,17 +191,8 @@ curl "http://localhost:3000/ratings/averages/date-uuid?romance_level=romantic&gr
 
 Located in `/shared/types/`, these TypeScript interfaces are used by both frontend and backend:
 
-**User Types** (`user.types.ts`):
-- `User` - User entity with id, email, favorites
-- `RegisterUserDTO` - Registration request (email, password)
-- `RegisterResponseDTO` - Registration response (user, accessToken)
-
-**Auth Types** (`auth.types.ts`):
-- `LoginDTO` - Login request (email, password)
-- `LoginResponseDTO` - Login response (user, accessToken)
-- `LogoutResponseDTO` - Logout response
-- `JWTPayload` - JWT token payload structure
-- `AuthErrorCode` - Standard error code types
+**User Types:** User, RegisterUserDTO, RegisterResponseDTO
+**Auth Types:** LoginDTO, LoginResponseDTO, LogoutResponseDTO, JWTPayload, AuthErrorCode
 
 **Date Types** (`date.types.ts`):
 - `Date` - Date idea entity
@@ -249,72 +220,81 @@ Backend tsconfig.json includes path mapping: `"@shared/*": ["../shared/types/*"]
 
 ### Database Schema (SQLite)
 
-The application uses SQLite with better-sqlite3. Database file: `date-nite.db` in project root. Schema is initialized automatically on application startup (see `backend/src/database.ts`).
+The application uses SQLite with better-sqlite3 for local database storage. The database file (`date-nite.db`) is created automatically at runtime in the project root directory and is gitignored.
 
-**Key tables:**
-- `users`:
-  - id (TEXT) - UUID generated with crypto.randomUUID()
-  - email (TEXT UNIQUE NOT NULL)
-  - favorites (TEXT NOT NULL) - JSON string array of date IDs
-  - password_hash (TEXT NOT NULL) - bcrypt hash of user password
-- `dates`:
-  - id (TEXT PRIMARY KEY)
-  - type (TEXT) - 'venue' or 'non-venue'
-  - name (TEXT)
-  - location (TEXT)
-  - avg_cost (REAL)
-  - recommended_group (TEXT)
-  - avg_rating (REAL)
-  - group_size (TEXT)
-  - icon (TEXT) - emoji icon
-  - description (TEXT)
-  - google_place_id (TEXT) - Google Place ID for venue-type dates
-- `ratings`:
-  - id (TEXT PRIMARY KEY)
-  - user_id (TEXT)
-  - date_id (TEXT)
-  - romance_level (TEXT) - 'casual' or 'romantic'
-  - group_size (TEXT) - 'single', 'double', or 'group'
-  - cost (REAL)
-  - good_bad (TEXT) - 'good' or 'bad'
-  - first_date (INTEGER) - 0 or 1 (boolean)
-  - created_at (TEXT NOT NULL) - ISO 8601 date string for 24-hour cooldown enforcement
+**users table:**
+```sql
+id              TEXT PRIMARY KEY
+email           TEXT UNIQUE NOT NULL
+favorites       TEXT              -- JSON array of date ids
+password_hash   TEXT NOT NULL     -- bcrypt hashed
+```
 
-**Authentication pattern:**
-- Local authentication only (no external auth service)
-- Passwords hashed with bcrypt (10 rounds) and stored in users.password_hash
-- User IDs are self-generated UUIDs (crypto.randomUUID())
-- JWT tokens generated and verified by backend for session management
+**dates table:**
+```sql
+id                  TEXT PRIMARY KEY
+type                TEXT              -- 'venue' or 'non-venue'
+name                TEXT
+location            TEXT
+avg_cost            REAL
+recommended_group   TEXT
+avg_rating          REAL
+group_size          TEXT
+icon                TEXT              -- emoji or URL
+description         TEXT
+```
+
+**ratings table:**
+```sql
+id              TEXT PRIMARY KEY
+user_id         TEXT              -- References users(id)
+date_id         TEXT              -- References dates(id)
+romance_level   TEXT              -- 'casual' or 'romantic'
+group_size      TEXT              -- 'single', 'double', or 'group'
+cost            REAL
+good_bad        TEXT              -- 'good' or 'bad'
+first_date      INTEGER           -- 0 or 1 (boolean)
+review          TEXT
+```
+
+**Database Notes:**
+- Tables created automatically on startup
+- Foreign key constraints not enforced by default in SQLite
+- Database file location: `/date-nite.db` (relative to project root)
 
 ### Frontend Structure
-- React 19 with React Router DOM
-- Pages in `frontend/src/pages/`: Home, Login, Favorites, Profile
-- Components in `frontend/src/pages/components/`: Navbar
-- Global styles in `frontend/src/styles/`
-- Currently uses JSX (not TypeScript)
+
+The frontend uses React 19 with React Router DOM and JSX (not TypeScript yet).
+
+**Pages:** Main discovery (Home), authentication (Login), dev tools (DevTools), placeholders (Favorites, Profile, DateInfo)
+
+**Components:** Navbar (navigation/logout), DateCard (date display with StarRating), Sidebar (filters), SearchBar
+
+**Services** (`frontend/src/services/`):
+- `api.js` - API wrapper functions:
+  - `checkHealth()` - Health check endpoint
+  - `loginUser(email, password)` - User login
+  - `registerUser(email, password)` - User registration
+  - `logoutUser()` - User logout
+  - `getDates()` - Fetch all date ideas
+
+**Styles:** 9 CSS files covering globals, pages (home, login), components (navbar, sidebar, dateCard, modal), and utilities (layout, import)
+
+**Routing:** App.jsx defines routes (/, /home, /profile, /favorites, /dev) with PrivateRoute wrapper for protected pages
 
 ## Environment Variables
 
-Backend requires the following environment variables in `backend/.env`:
+Backend requires `JWT_SECRET` and `JWT_EXPIRES_IN` (default: "7d") in `backend/.env`.
 
-**JWT Configuration:**
-- `JWT_SECRET` - Secret key for signing JWT tokens (use strong random string in production)
-- `JWT_EXPIRES_IN` - JWT token expiration (default: "7d")
+**Note:** Uses local SQLite database (`date-nite.db`), no external credentials needed.
 
-**Google Places API Configuration:**
-- `GOOGLE_PLACES_API_KEY` - Google Places API key (required for venue date features and place search)
+## Key Dependencies
 
-**Example `.env` file:**
-```env
-# JWT Configuration (REQUIRED)
-JWT_SECRET=your-secret-key-change-in-production
-JWT_EXPIRES_IN=7d
+**Backend:** better-sqlite3 (SQLite), bcryptjs (password hashing), jsonwebtoken (JWT), cookie-parser (cookies), express, cors, dotenv, ts-node-dev
 
-# Google Places API (REQUIRED for venue date features)
-GOOGLE_PLACES_API_KEY=your-google-api-key
-```
+**Frontend:** React 19, react-router-dom, bootstrap, vite
 
-**Note:** Jest automatically loads environment variables via `setupTests.ts` if it exists.
+**Testing:** jest, ts-jest, supertest
 
 ## Important Notes
 
@@ -324,21 +304,23 @@ GOOGLE_PLACES_API_KEY=your-google-api-key
 - Uses `ts-node-dev` for development with transpile-only mode
 
 ### Current Limitations
-- No global error handling middleware yet
+- `/dates` router exists but is not mounted in `index.ts` (endpoint not accessible)
+- Favorites page frontend is a placeholder (not implemented)
+- Profile page frontend is a placeholder (not implemented)
+- Set/remove favorite service functions are incomplete or don't persist to database
+- No date submission functionality yet
+- No rating submission functionality yet
+- Global error handling middleware exists (`errorHandler.ts`) but is not mounted
 - No advanced request validation middleware (only basic email/password checks)
-- Frontend-backend authentication integration not yet implemented
 - No username support yet (planned for future iteration)
 - No refresh token mechanism (JWT tokens expire after 7 days)
-- No token blacklisting for logout (logout is client-side only)
-- Google Places API has rate limits and costs per request
-- Icon generation uses simple keyword matching (could be enhanced with ML/AI)
-- Venue dates depend on Google Places API availability
+- No token blacklisting for logout (cookie is cleared client-side only)
 
 ### Development Patterns
 
 **When adding new endpoints:**
 1. Define DTOs in `/shared/types/` for request/response types
-2. Define database functions in `database.ts` if needed
+2. Define database functions in `database.ts` if needed (SQLite operations with better-sqlite3)
 3. Create business logic in appropriate service file (use DTOs for parameters and return types)
 4. Create route handler that:
    - Validates input using DTO types
@@ -349,11 +331,11 @@ GOOGLE_PLACES_API_KEY=your-google-api-key
 6. Add tests following Jest/Supertest pattern (see `users.test.ts` and `auth.test.ts`)
 
 **Authentication patterns:**
-- Hash passwords with bcrypt before storing: `bcrypt.hash(password, 10)`
-- Verify passwords during login: `bcrypt.compare(password, stored_hash)`
-- Generate UUIDs for user IDs: `crypto.randomUUID()`
+- Use bcrypt for password hashing (10 rounds) during registration
+- Use bcrypt comparison for password verification during login
+- Set httpOnly cookies with JWT tokens after successful authentication
 - Use `authenticateToken` middleware for protected routes
-- Access authenticated user via `req.user` (populated by middleware)
+- Access authenticated user via `req.user` (populated from cookie by middleware)
 - Return standardized error codes for auth failures
 
 **Google Places integration patterns:**

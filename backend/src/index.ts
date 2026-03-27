@@ -19,8 +19,21 @@ app.use(cors({
   credentials: true
 }));
 
+app.use(cookieParser());
 app.use(express.json());
 app.use(cookieParser());
+
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    service: "date-nite-backend",
+    status: "running",
+    endpoints: ["/health", "/users"],
+  });
+});
+
+app.get("/.well-known/appspecific/com.chrome.devtools.json", (_req, res) => {
+  res.status(204).end();
+});
 
 app.use("/health", healthRouter);
 app.use("/users", usersRouter);

@@ -54,7 +54,7 @@ function Login() {
   };
 
   return (
-    <main className="container-fluid">
+    <main className="login-page">
       <h1>Login to Date-Nite</h1>
       <div className="formArea">
         <form onSubmit={handleLogin}>

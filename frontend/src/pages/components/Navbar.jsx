@@ -7,23 +7,10 @@ function Navbar() {
   const [healthStatus, setHealthStatus] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
 
-  const handleHealthCheck = async () => {
-    setIsChecking(true);
-    setHealthStatus(null);
-    const result = await checkHealth();
-    if (result.success) {
-      setHealthStatus({
-        type: 'success',
-        message: `Backend is healthy! Uptime: ${Math.floor(result.data.uptime)}s`
-      });
-    } else {
-      setHealthStatus({
-        type: 'error',
-        message: `Backend is down: ${result.error}`
-      });
-    }
-    setIsChecking(false);
-    setTimeout(() => setHealthStatus(null), 5000);
+  const handleLogout = async () => {
+    await logoutUser();
+    localStorage.removeItem('user');
+    navigate('/');
   };
 
   const handleLogout = async () => {
@@ -57,19 +44,12 @@ function Navbar() {
             {isChecking ? 'Checking...' : 'Check Backend'}
           </button>
         </li>
+        {import.meta.env.DEV && (
+          <li className="nav-item">
+            <NavLink className="nav-link nav-link--dev" to="/dev">⚙</NavLink>
+          </li>
+        )}
       </ul>
-      {healthStatus && (
-        <span style={{
-          marginLeft: '10px',
-          padding: '5px 10px',
-          borderRadius: '4px',
-          backgroundColor: healthStatus.type === 'success' ? '#d4edda' : '#f8d7da',
-          color: healthStatus.type === 'success' ? '#155724' : '#721c24',
-          fontSize: '14px'
-        }}>
-          {healthStatus.message}
-        </span>
-      )}
     </nav>
   );
 }
