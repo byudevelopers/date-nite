@@ -25,6 +25,7 @@ export interface DateIdea {
   group_size: string;
   icon: string;
   description: string;
+  google_place_id: string | null;
 }
 
 export interface Rating {
@@ -61,7 +62,8 @@ CREATE TABLE IF NOT EXISTS dates (
   avg_rating REAL,
   group_size TEXT,
   icon TEXT,
-  description TEXT
+  description TEXT,
+  google_place_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS ratings (
@@ -182,9 +184,9 @@ export function createDate(date: DateIdea): DateIdea | null {
     INSERT INTO dates (
       id, type, name, location, avg_cost,
       recommended_group, avg_rating,
-      group_size, icon, description
+      group_size, icon, description, google_place_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
   ).run(
     date.id,
@@ -197,6 +199,7 @@ export function createDate(date: DateIdea): DateIdea | null {
     date.group_size,
     date.icon,
     date.description,
+    date.google_place_id,
   );
 
   return getDate(date.id);
@@ -214,7 +217,7 @@ export function updateDate(
     UPDATE dates SET
       type = ?, name = ?, location = ?, avg_cost = ?,
       recommended_group = ?, avg_rating = ?, group_size = ?,
-      icon = ?, description = ?
+      icon = ?, description = ?, google_place_id = ?
     WHERE id = ?
   `,
   ).run(
@@ -227,6 +230,7 @@ export function updateDate(
     updates.group_size ?? existing.group_size,
     updates.icon ?? existing.icon,
     updates.description ?? existing.description,
+    updates.google_place_id ?? existing.google_place_id,
     id,
   );
 
