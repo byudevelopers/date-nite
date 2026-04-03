@@ -2,6 +2,8 @@
 
 Date Nite is a community-driven date idea rating application designed to help university students discover high-quality date ideas. The platform enables users to submit both at-home and local venue date ideas, rate their experiences, and browse community-recommended dates to keep their dating life fresh and exciting.
 
+<img width="1728" height="1084" alt="Screenshot 2026-04-02 at 7 58 14 PM" src="https://github.com/user-attachments/assets/1ee25966-0ab1-4d1f-a2c4-e20c166c594f" />
+
 ## Overview
 
 Starting with the BYU community, Date Nite aims to solve the common challenge of falling into repetitive date patterns by providing a curated, user-rated collection of date ideas. Users can share their experiences, rate dates they've tried, and discover new ideas based on community feedback.
@@ -15,7 +17,8 @@ Starting with the BYU community, Date Nite aims to solve the common challenge of
 - **Rating System**: Simple thumbs-up/thumbs-down rating with date context (casual/romantic, single/double/triple+)
 - **Browse Date Ideas**: View community-submitted date ideas (available without login)
 - **User Authentication**: Custom authentication system for submitting and rating dates
-- **Favorites List**: Save favorite date ideas for future reference
+- **Favorites List**: Save favorite date 
+ideas for future reference
 
 ### Planned Features (Post-MVP)
 - **Random Date Generator**: Get spontaneous date suggestions
