@@ -51,6 +51,15 @@
     min-width: 0;
 }
 
+/* ── Main area (favorites page) ──────────────────── */
+.favorites-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+}
+
 /* ── Search Bar ─────────────────────────────────────── */
 .search-bar-wrapper {
     display: flex;
