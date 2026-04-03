@@ -118,6 +118,12 @@
     text-transform: capitalize;
 }
 
+.modal-card--create {
+    max-width: 560px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
 .modal-tags {
     display: flex;
     flex-wrap: wrap;

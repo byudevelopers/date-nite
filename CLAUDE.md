@@ -56,8 +56,8 @@ This repository contains both frontend and backend in separate directories at th
 date-nite/
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/ (Home, Login, DevTools, Favorites*, Profile*, DateInfo*)
-│   │   │   └── components/ (Navbar, DateCard, Sidebar, SearchBar)
+│   │   ├── pages/ (Home, Login, CreateDate, DevTools, Favorites*, Profile*)
+│   │   │   └── components/ (DateCard, Sidebar, SearchBar)
 │   │   ├── services/ (api.js)
 │   │   ├── styles/ (9 CSS files)
 │   │   ├── main.jsx
@@ -317,21 +317,36 @@ created_at      TEXT NOT NULL     -- ISO 8601 timestamp
 
 The frontend uses React 19 with React Router DOM and JSX (not TypeScript yet).
 
-**Pages:** Main discovery (Home), authentication (Login), dev tools (DevTools), placeholders (Favorites, Profile, DateInfo)
+**Pages:**
+- `Home` — date discovery with search, filters, sort, and inline "+ New Date" modal
+- `CreateDate` — full-page create date form (also accessible via `/create-date`)
+- `Login` — authentication (register/login)
+- `DevTools` — dev utilities (dev mode only)
+- `Favorites` — placeholder (no UI yet)
+- `Profile` — placeholder (no UI yet)
 
-**Components:** Navbar (navigation/logout), DateCard (date display with StarRating), Sidebar (filters), SearchBar
+**Create date form fields:** name, type (venue/non-venue), description, location (venue only), icon picker. `avg_cost` and `recommended_group` are intentionally excluded — they are calculated from user ratings.
 
-**Services** (`frontend/src/services/`):
-- `api.js` - API wrapper functions:
-  - `checkHealth()` - Health check endpoint
-  - `loginUser(email, password)` - User login
-  - `registerUser(email, password)` - User registration
-  - `logoutUser()` - User logout
-  - `getDates()` - Fetch all date ideas
+**Components:** DateCard (date display with StarRating), Sidebar (nav, sort, filters), SearchBar
 
-**Styles:** 9 CSS files covering globals, pages (home, login), components (navbar, sidebar, dateCard, modal), and utilities (layout, import)
+**Services** (`frontend/src/services/api.js`):
+- `checkHealth()` - Health check
+- `loginUser(email, password)` - User login
+- `registerUser(email, password)` - User registration
+- `logoutUser()` - User logout
+- `getCurrentUser()` - Fetch authenticated user (`/users/me`)
+- `getDates()` - Fetch all date ideas
+- `createDate(dateData)` - Create a new date idea
+- `getFavorites()` - Get saved dates for current user
+- `addFavorite(dateId)` - Save a date to favorites
+- `removeFavorite(dateId)` - Remove a date from favorites
+- `searchPlaces(query, location)` - Search Google Places
+- `createRating(ratingData)` - Submit a rating
+- `getRatingAverages(dateId, filters)` - Get aggregate rating stats with optional filters
 
-**Routing:** App.jsx defines routes (/, /home, /profile, /favorites, /dev) with PrivateRoute wrapper for protected pages
+**Styles:** 9 CSS files — `globals.css`, `login.css`, `layout.css`, `sidebar.css`, `dateCard.css`, `modal.css`, `create-date.css`, `home.css`, `import.css` (all loaded globally via `import.css`)
+
+**Routing:** App.jsx defines routes (/, /home, /profile, /favorites, /create-date, /dev) with PrivateRoute wrapper for protected pages
 
 ## Environment Variables
 
@@ -370,10 +385,8 @@ Backend requires the following environment variables in `backend/.env`:
 **Frontend:**
 - Favorites page is placeholder (empty component, no UI implementation)
 - Profile page is placeholder (empty component, no UI implementation)
-- API service incomplete: Missing functions for creating dates, submitting ratings, fetching rating averages, searching places, and managing favorites
 - No rating submission UI: Backend supports ratings but no frontend form exists
-- No date creation UI: Backend supports date creation but no frontend form exists
-- Home page modal shows "Full reviews & ratings coming soon" despite backend supporting rating aggregates
+- Home page date info modal shows "Full reviews & ratings coming soon" despite backend supporting rating aggregates
 
 **Integration:**
 - Google Places API requires valid API key in environment variables
