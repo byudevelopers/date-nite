@@ -1,0 +1,206 @@
+/* ── Create Date Page ──────────────────────────────── */
+.create-date-page {
+  min-height: calc(100vh - var(--navbar-height));
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--color-bg-page);
+  padding: 32px 24px 48px;
+}
+
+.create-date-card {
+  background: var(--color-bg-surface);
+  border: 2px solid var(--color-border);
+  border-radius: 16px;
+  padding: 36px 40px;
+  width: 100%;
+  max-width: 560px;
+}
+
+.create-date-card h1 {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 28px;
+}
+
+/* ── Form Primitives ───────────────────────────────── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-control {
+  border: 2px solid var(--color-border-input);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 15px;
+  font-family: var(--font-sans);
+  color: var(--color-text-strong);
+  background: var(--color-bg-page);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.form-control:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
+  outline: none;
+  background: var(--color-bg-surface);
+}
+
+.form-control::placeholder {
+  color: var(--color-text-placeholder);
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 90px;
+}
+
+select.form-control {
+  cursor: pointer;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Type Toggle ───────────────────────────────────── */
+.type-toggle {
+  display: flex;
+  gap: 10px;
+}
+
+.type-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px solid var(--color-border-input);
+  border-radius: 10px;
+  background: var(--color-bg-page);
+  color: var(--color-text-body);
+  font-size: 14px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.type-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.type-btn.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* ── Icon Picker ───────────────────────────────────── */
+.icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--color-border-input);
+  border-radius: 8px;
+  background: var(--color-bg-page);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s, background 0.2s;
+  line-height: 1;
+}
+
+.icon-btn:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.icon-btn.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+/* ── Actions ───────────────────────────────────────── */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.submit-btn {
+  flex: 1;
+  padding: 11px;
+  background: var(--color-accent);
+  color: var(--color-text-on-dark);
+  border: 2px solid var(--color-accent);
+  border-radius: 10px;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancel-btn {
+  padding: 11px 20px;
+  background: var(--color-bg-muted);
+  color: var(--color-text-body);
+  border: 2px solid var(--color-border);
+  border-radius: 10px;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.cancel-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.error {
+  color: var(--color-accent);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 480px) {
+  .create-date-card {
+    padding: 24px 20px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}

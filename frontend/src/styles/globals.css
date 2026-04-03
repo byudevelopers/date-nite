@@ -56,3 +56,7 @@
 .page-content {
     padding-top: var(--navbar-height);
 }
+
+.page-content--no-nav {
+    padding-top: 0;
+}

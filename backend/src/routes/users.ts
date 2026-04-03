@@ -92,17 +92,13 @@ router.get("/me", authenticateToken, async (req, res) => {
 
 router.get("/favorites", authenticateToken, async (req, res) => {
   try {
-    // Clear the cookie
-    res.clearCookie('authToken');
-
-    const result = await logoutService();
-    res.status(200).json(result);
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: "UNAUTHORIZED" });
+    const result = getFavoriteDates(userId);
+    res.status(200).json({ favorites: result ?? [] });
   } catch (error: any) {
     logServerError(req, error, "get_favorites");
-    res.status(500).json({
-    error: "GET_FAVORITES_FAILED",
-    message: "Failed to get favorite dates",
-  });
+    res.status(500).json({ error: "GET_FAVORITES_FAILED", message: "Failed to get favorite dates" });
   }
 });
 

@@ -6,6 +6,8 @@ Date Nite is a community-driven date idea rating application designed to help un
 
 Starting with the BYU community, Date Nite aims to solve the common challenge of falling into repetitive date patterns by providing a curated, user-rated collection of date ideas. Users can share their experiences, rate dates they've tried, and discover new ideas based on community feedback.
 
+**Due**: April 9th, 2026
+
 ## Features
 
 ### Current Features (In Development)

@@ -178,6 +178,36 @@ export function getAllDates(): DateIdea[] {
   return db.prepare("SELECT * FROM dates").all() as DateIdea[];
 }
 
+export interface DateIdeaWithStats extends DateIdea {
+  rating_count: number;
+  percent_recommended: number;
+  latest_rating_at: string | null;
+  first_date_count: number;
+}
+
+export function getAllDatesWithStats(): DateIdeaWithStats[] {
+  return db.prepare(`
+    SELECT
+      d.*,
+      COALESCE(r.rating_count, 0)        AS rating_count,
+      COALESCE(r.percent_recommended, 0) AS percent_recommended,
+      r.latest_rating_at,
+      COALESCE(r.first_date_count, 0)    AS first_date_count
+    FROM dates d
+    LEFT JOIN (
+      SELECT
+        date_id,
+        COUNT(*)                                                             AS rating_count,
+        ROUND(SUM(CASE WHEN good_bad = 'good' THEN 1.0 ELSE 0 END)
+              * 100.0 / COUNT(*))                                           AS percent_recommended,
+        MAX(created_at)                                                      AS latest_rating_at,
+        SUM(first_date)                                                      AS first_date_count
+      FROM ratings
+      GROUP BY date_id
+    ) r ON d.id = r.date_id
+  `).all() as DateIdeaWithStats[];
+}
+
 export function createDate(date: DateIdea): DateIdea | null {
   db.prepare(
     `

@@ -75,6 +75,88 @@ export async function logoutUser() {
   });
 }
 
+/**
+ * Get current authenticated user
+ */
+export async function getCurrentUser() {
+  return apiFetch('/users/me');
+}
+
+/**
+ * Get saved/favorite dates for current user
+ */
+export async function getFavorites() {
+  return apiFetch('/users/favorites');
+}
+
+/**
+ * Save a date to favorites
+ */
+export async function addFavorite(dateId) {
+  return apiFetch('/users/favorites/add', {
+    method: 'POST',
+    body: JSON.stringify({ dateId }),
+  });
+}
+
+/**
+ * Remove a date from favorites
+ */
+export async function removeFavorite(dateId) {
+  return apiFetch('/users/favorites/remove', {
+    method: 'DELETE',
+    body: JSON.stringify({ dateId }),
+  });
+}
+
+/**
+ * Get all date ideas
+ */
+export async function getDates() {
+  return apiFetch('/dates');
+}
+
+/**
+ * Create a new date idea
+ */
+export async function createDate(dateData) {
+  return apiFetch('/dates/create', {
+    method: 'POST',
+    body: JSON.stringify(dateData),
+  });
+}
+
+/**
+ * Search Google Places
+ */
+export async function searchPlaces(query, location) {
+  const params = new URLSearchParams({ query });
+  if (location) params.set('location', location);
+  return apiFetch(`/dates/search-places?${params}`);
+}
+
+/**
+ * Submit a rating for a date
+ */
+export async function createRating(ratingData) {
+  return apiFetch('/ratings', {
+    method: 'POST',
+    body: JSON.stringify(ratingData),
+  });
+}
+
+/**
+ * Get aggregate rating stats for a date, with optional filters
+ */
+export async function getRatingAverages(dateId, filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.romance_level) params.set('romance_level', filters.romance_level);
+  if (filters.group_size)    params.set('group_size', filters.group_size);
+  if (filters.first_date != null) params.set('first_date', filters.first_date);
+  const qs = params.toString();
+  return apiFetch(`/ratings/averages/${dateId}${qs ? `?${qs}` : ''}`);
+}
+
 // Get all dates
 export async function getDates() {
   // Fetch from /dates, expect an array of date objects

@@ -1,4 +1,4 @@
-import { createUser, getUser, getDate } from "../database";
+import { createUser, getUser, getDate, updateUser } from "../database";
 import { signToken } from "../utils/jwt";
 import { randomUUID } from "crypto";
 import * as bcrypt from "bcryptjs";
@@ -25,13 +25,11 @@ export async function registerUserService(
 }
 
 export function setFavoriteDate(userId: string, dateId: string) {
-  // This function would interact with the database to set a date as favorite for the user
-  // For example, it could update the user's profile in the database to include the dateId in their favorites list
-  // The actual implementation would depend on how your database and user profiles are structured
   const user = getUser(userId);
   if (!user) return false;
   if (!user.favorites.includes(dateId)) {
     user.favorites.push(dateId);
+    updateUser(userId, { favorites: user.favorites });
   }
   return true;
 }
@@ -46,11 +44,9 @@ export function getFavoriteDates(userId: string) {
 }
 
 export function removeFavoriteDate(userId: string, dateId: string) {
-  // This function would interact with the database to remove a date from the user's favorites
-  // It would update the user's profile in the database to remove the dateId from their favorites list
-  // The actual implementation would depend on how your database and user profiles are structured
   const user = getUser(userId);
   if (!user) return false;
-  user.favorites = user.favorites.filter((id) => id !== dateId);
+  const updated = user.favorites.filter((id) => id !== dateId);
+  updateUser(userId, { favorites: updated });
   return true;
 }
