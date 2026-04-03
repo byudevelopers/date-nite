@@ -8,12 +8,6 @@ function Navbar() {
   const [isChecking, setIsChecking] = useState(false);
 
   const handleLogout = async () => {
-    await logoutUser();
-    localStorage.removeItem('user');
-    navigate('/');
-  };
-
-  const handleLogout = async () => {
     // Call backend logout endpoint to clear cookie
     await logoutUser();
 

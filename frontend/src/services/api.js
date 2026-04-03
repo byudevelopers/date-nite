@@ -74,3 +74,30 @@ export async function logoutUser() {
     method: 'POST',
   });
 }
+
+// Get all dates
+export async function getDates() {
+  // Fetch from /dates, expect an array of date objects
+  const res = await fetch(`${API_BASE_URL}/dates`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  try {
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.message || data.error || `HTTP error! status: ${res.status}` };
+    }
+    // If the response is an array, wrap it in { success: true, data }
+    if (Array.isArray(data)) {
+      return { success: true, data };
+    }
+    // If the response is an object with a data property, use that
+    if (data && Array.isArray(data.data)) {
+      return { success: true, data: data.data };
+    }
+    // Otherwise, error
+    return { success: false, error: 'Unexpected response format from /dates' };
+  } catch (e) {
+    return { success: false, error: 'Failed to parse /dates response' };
+  }
+}
