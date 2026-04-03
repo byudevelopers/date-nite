@@ -110,13 +110,6 @@ export async function removeFavorite(dateId) {
 }
 
 /**
- * Get all date ideas
- */
-export async function getDates() {
-  return apiFetch('/dates');
-}
-
-/**
  * Create a new date idea
  */
 export async function createDate(dateData) {
