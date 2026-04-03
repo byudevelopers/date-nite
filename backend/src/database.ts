@@ -18,13 +18,13 @@ export interface DateIdea {
   id: string;
   type: string;
   name: string;
-  location: string;
-  avg_cost: number;
-  recommended_group: string;
-  avg_rating: number;
-  group_size: string;
+  location: string | null;
+  avg_cost: number | null;
+  recommended_group: string | null;
+  avg_rating: number | null;
+  group_size: string | null;
   icon: string;
-  description: string;
+  description: string | null;
   google_place_id: string | null;
 }
 

@@ -24,7 +24,7 @@ export async function searchGooglePlaces(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+        'X-Goog-Api-Key': API_KEY,
         'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.types,places.editorialSummary,places.rating,places.priceLevel'
       },
       body: JSON.stringify({ textQuery: searchQuery })
@@ -59,31 +59,37 @@ export async function searchGooglePlaces(
   }
 }
 
-// Fetch single place details by Place ID
+// Fetch single place details by Place ID (uses new Places API v2)
 export async function fetchGooglePlace(placeId: string): Promise<GooglePlace> {
   try {
-    const url = new URL('https://maps.googleapis.com/maps/api/place/details/json');
-    url.searchParams.append('place_id', placeId);
-    url.searchParams.append('fields', 'place_id,name,formatted_address,types,editorial_summary,rating,price_level');
-    url.searchParams.append('key', GOOGLE_PLACES_API_KEY);
+    const url = `https://places.googleapis.com/v1/places/${placeId}`;
 
-    const response = await fetch(url.toString());
+    const response = await fetch(url, {
+      headers: {
+        'X-Goog-Api-Key': API_KEY,
+        'X-Goog-FieldMask': 'id,displayName,formattedAddress,types,editorialSummary,rating,priceLevel',
+      },
+    });
+
+    if (response.status === 404) {
+      throw new Error('PLACE_NOT_FOUND');
+    }
 
     if (!response.ok) {
       throw new Error(`Google Places API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const place = await response.json();
 
-    if (data.status === 'NOT_FOUND' || data.status === 'INVALID_REQUEST') {
-      throw new Error('PLACE_NOT_FOUND');
-    }
-
-    if (data.status !== 'OK') {
-      throw new Error(`Places API status: ${data.status}`);
-    }
-
-    return data.result;
+    return {
+      place_id: place.id,
+      name: place.displayName?.text || '',
+      formatted_address: place.formattedAddress || '',
+      types: place.types || [],
+      ...(place.editorialSummary ? { editorial_summary: { overview: place.editorialSummary.text as string } } : {}),
+      rating: place.rating,
+      price_level: place.priceLevel,
+    };
   } catch (error: any) {
     if (error.message === 'PLACE_NOT_FOUND') {
       throw error;

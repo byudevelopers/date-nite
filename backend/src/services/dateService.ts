@@ -45,6 +45,7 @@ export async function createDateService(
   }
 
   let description: string | null = null;
+  let location: string | null = null;
   let icon: string;
 
   // Handle venue dates with Google Places integration
@@ -52,6 +53,9 @@ export async function createDateService(
     try {
       // Fetch and validate Google Place
       const place = await fetchGooglePlace(google_place_id);
+
+      // Use formatted address as location
+      location = place.formatted_address || null;
 
       // Use editorial summary or types as description
       if (place.editorial_summary?.overview) {
@@ -88,7 +92,7 @@ export async function createDateService(
     id,
     type,
     name: name.trim(),
-    location: null,              // SQLite expects all fields
+    location,
     avg_cost: null,
     recommended_group: null,
     avg_rating: null,

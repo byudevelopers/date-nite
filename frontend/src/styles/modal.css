@@ -26,6 +26,8 @@
     border-radius: 20px;
     padding: 32px;
     max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
     width: 100%;
     position: relative;
     display: flex;
@@ -118,10 +120,122 @@
     text-transform: capitalize;
 }
 
+.modal-card--create {
+    max-width: 560px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
 .modal-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+}
+
+.place-results {
+    border: 2px solid var(--color-border-input);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.place-result-item {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--color-bg-page);
+    border: none;
+    border-bottom: 1px solid var(--color-border-subtle);
+    cursor: pointer;
+    gap: 2px;
+    transition: background 0.15s;
+}
+
+.place-result-item:last-child {
+    border-bottom: none;
+}
+
+.place-result-item:hover {
+    background: var(--color-accent-subtle);
+}
+
+.place-result-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.place-result-address {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.place-search-status {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    margin: 4px 0 0;
+}
+
+.selected-place {
+    border: 2px solid var(--color-accent);
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: var(--color-accent-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.selected-place-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.selected-place-address {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.change-place-btn {
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    align-self: flex-start;
+    margin-top: 4px;
+}
+
+.modal-nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-nav-row .modal-close {
+    position: static;
+}
+
+.modal-back-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.modal-back-btn:hover {
+    background: var(--color-bg-muted);
+    color: var(--color-text-primary);
 }
 
 .modal-placeholder-note {

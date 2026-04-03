@@ -2,40 +2,391 @@ import React, { useState, useEffect } from 'react';
 import DateCard, { StarRating } from './components/DateCard';
 import SearchBar from './components/SearchBar';
 import Sidebar from './components/Sidebar';
-import { getDates, getFavorites, addFavorite, removeFavorite } from '../services/api';
+import { getDates, getFavorites, addFavorite, removeFavorite, createDate, createRating, getRatingAverages, searchPlaces } from '../services/api';
+
+const ICONS = ['🍕', '🎬', '🏔️', '🎨', '🎳', '🧁', '🎭', '🌿', '🎵', '🏖️', '🍣', '🎮', '🚴', '🌄', '📅'];
+
+const EMPTY_FORM = {
+  name: '',
+  type: 'non-venue',
+  description: '',
+  google_place_id: '',
+  icon: '📅',
+};
+
+function CreateDateModal({ onClose, onCreated }) {
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [placeSearch, setPlaceSearch] = useState('');
+  const [placeResults, setPlaceResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState(null);
+
+  useEffect(() => {
+    if (form.type !== 'venue' || placeSearch.trim().length < 2) {
+      setPlaceResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      const result = await searchPlaces(placeSearch);
+      setSearching(false);
+      if (result.success) setPlaceResults(result.data.places ?? []);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [placeSearch, form.type]);
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  }
+
+  function selectPlace(place) {
+    setForm(prev => ({ ...prev, name: place.name, google_place_id: place.place_id }));
+    setSelectedPlace(place);
+    setPlaceSearch('');
+    setPlaceResults([]);
+  }
+
+  function clearPlace() {
+    setSelectedPlace(null);
+    setForm(prev => ({ ...prev, name: '', google_place_id: '' }));
+  }
+
+  function switchType(type) {
+    setForm(prev => ({ ...prev, type, name: '', google_place_id: '' }));
+    setSelectedPlace(null);
+    setPlaceSearch('');
+    setPlaceResults([]);
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    if (form.type === 'venue' && !form.google_place_id) {
+      setError('Please select a place from the search results.');
+      return;
+    }
+    if (form.type === 'non-venue' && !form.name.trim()) {
+      setError('Name is required.');
+      return;
+    }
+    setSubmitting(true);
+    const result = await createDate({
+      type: form.type,
+      name: form.name,
+      icon: form.icon,
+      ...(form.type === 'venue' ? { google_place_id: form.google_place_id } : { description: form.description }),
+    });
+    setSubmitting(false);
+    if (result.success) {
+      onCreated();
+    } else {
+      setError(result.error || 'Failed to create date. Is the backend running?');
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card modal-card--create" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2 className="modal-title">Submit a Date Idea</h2>
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Type *</label>
+            <div className="type-toggle">
+              <button
+                type="button"
+                className={`type-btn${form.type === 'venue' ? ' active' : ''}`}
+                onClick={() => switchType('venue')}
+              >
+                📍 Venue
+              </button>
+              <button
+                type="button"
+                className={`type-btn${form.type === 'non-venue' ? ' active' : ''}`}
+                onClick={() => switchType('non-venue')}
+              >
+                🏠 At-home
+              </button>
+            </div>
+          </div>
+
+          {form.type === 'venue' ? (
+            <div className="form-group">
+              <label>Search for a place *</label>
+              {selectedPlace ? (
+                <div className="selected-place">
+                  <span className="selected-place-name">{selectedPlace.name}</span>
+                  <span className="selected-place-address">{selectedPlace.formatted_address}</span>
+                  <button type="button" className="change-place-btn" onClick={clearPlace}>
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    className="form-control"
+                    placeholder="e.g. Dutch Bros Provo"
+                    value={placeSearch}
+                    onChange={e => setPlaceSearch(e.target.value)}
+                  />
+                  {searching && <p className="place-search-status">Searching...</p>}
+                  {placeResults.length > 0 && (
+                    <div className="place-results">
+                      {placeResults.map(place => (
+                        <button
+                          key={place.place_id}
+                          type="button"
+                          className="place-result-item"
+                          onClick={() => selectPlace(place)}
+                        >
+                          <span className="place-result-name">{place.name}</span>
+                          <span className="place-result-address">{place.formatted_address}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="form-group">
+                <label htmlFor="cd-name">Name *</label>
+                <input
+                  id="cd-name"
+                  name="name"
+                  className="form-control"
+                  placeholder="e.g. Stargazing at Rock Canyon"
+                  value={form.name}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="cd-description">Description</label>
+                <textarea
+                  id="cd-description"
+                  name="description"
+                  className="form-control"
+                  placeholder="Describe the date idea..."
+                  rows={3}
+                  value={form.description}
+                  onChange={handleChange}
+                />
+              </div>
+            </>
+          )}
+
+          <div className="form-group">
+            <label>Icon</label>
+            <div className="icon-picker">
+              {ICONS.map(icon => (
+                <button
+                  key={icon}
+                  type="button"
+                  className={`icon-btn${form.icon === icon ? ' active' : ''}`}
+                  onClick={() => setForm(prev => ({ ...prev, icon }))}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && <p className="error">{error}</p>}
+
+          <div className="form-actions">
+            <button type="button" className="cancel-btn" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="submit-btn" disabled={submitting}>
+              {submitting ? 'Submitting...' : 'Submit Date'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 const FILTER_SECTIONS = [
   { title: 'Date Type', key: 'type', options: ['Venue', 'At-home'] },
   { title: 'Cost', key: 'cost', options: ['Free', 'Under $10', '$10–$25', '$25–$50', '$50+'] },
 ];
 
+const EMPTY_RATING = { good_bad: '', romance_level: '', group_size: '', first_date: '', cost: '' };
+
 function DateInfoModal({ date, onClose }) {
+  const [step, setStep] = useState('info');
+  const [ratingForm, setRatingForm] = useState(EMPTY_RATING);
+  const [stats, setStats] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [ratingError, setRatingError] = useState('');
+
+  useEffect(() => {
+    setStep('info');
+    setRatingForm(EMPTY_RATING);
+    setStats(null);
+    setRatingError('');
+  }, [date?.id]);
+
   if (!date) return null;
+
+  function setField(field, value) {
+    setRatingForm(prev => ({ ...prev, [field]: value }));
+  }
+
+  function resetToInfo() {
+    setStep('info');
+    setRatingForm(EMPTY_RATING);
+    setStats(null);
+    setRatingError('');
+  }
+
+  async function handleRatingSubmit(e) {
+    e.preventDefault();
+    setRatingError('');
+    if (!ratingForm.good_bad || !ratingForm.romance_level || !ratingForm.group_size || !ratingForm.first_date || ratingForm.cost === '') {
+      setRatingError('Please fill in all fields.');
+      return;
+    }
+    setSubmitting(true);
+    const result = await createRating({
+      date_id: date.id,
+      good_bad: ratingForm.good_bad,
+      romance_level: ratingForm.romance_level,
+      group_size: ratingForm.group_size,
+      first_date: ratingForm.first_date === 'yes',
+      cost: Number(ratingForm.cost),
+    });
+    setSubmitting(false);
+    if (result.success) {
+      const statsResult = await getRatingAverages(date.id);
+      if (statsResult.success) setStats(statsResult.data);
+      setStep('thanks');
+    } else {
+      setRatingError(result.error || 'Failed to submit rating.');
+    }
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>✕</button>
-        <div className="modal-type-badge">
-          {date.type === 'venue' ? '📍 Venue' : '🏠 At-home'}
-        </div>
-        <h2 className="modal-title">{date.name}</h2>
-        <StarRating rating={date.avg_rating ?? 0} />
-        <p className="modal-description">{date.description}</p>
-        <div className="modal-meta">
-          <div className="meta-item">
-            <span className="meta-label">Cost</span>
-            <span className="meta-value">{date.avg_cost ? `$${date.avg_cost}` : 'Free'}</span>
-          </div>
-          <div className="meta-item">
-            <span className="meta-label">Group</span>
-            <span className="meta-value">{date.recommended_group ?? '—'}</span>
-          </div>
-          <div className="meta-item">
-            <span className="meta-label">Location</span>
-            <span className="meta-value">{date.location ?? '—'}</span>
-          </div>
-        </div>
-        <p className="modal-placeholder-note">Full reviews & ratings coming soon ✨</p>
+
+        {step === 'info' && (
+          <>
+            <button className="modal-close" onClick={onClose}>✕</button>
+            <div className="modal-type-badge">
+              {date.type === 'venue' ? '📍 Venue' : '🏠 At-home'}
+            </div>
+            <h2 className="modal-title">{date.name}</h2>
+            <StarRating rating={date.avg_rating ?? 0} />
+            <p className="modal-description">{date.description}</p>
+            <div className="modal-meta">
+              <div className="meta-item">
+                <span className="meta-label">Cost</span>
+                <span className="meta-value">{date.avg_cost ? `$${date.avg_cost}` : 'Free'}</span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Group</span>
+                <span className="meta-value">{date.recommended_group ?? '—'}</span>
+              </div>
+              {date.type === 'venue' && (
+                <div className="meta-item">
+                  <span className="meta-label">Location</span>
+                  <span className="meta-value">{date.location ?? '—'}</span>
+                </div>
+              )}
+            </div>
+            <button className="submit-btn" onClick={() => setStep('rate')}>
+              Rate this date →
+            </button>
+          </>
+        )}
+
+        {step === 'rate' && (
+          <>
+            <div className="modal-nav-row">
+              <button className="modal-back-btn" onClick={resetToInfo}>← Back</button>
+              <button className="modal-close" onClick={onClose}>✕</button>
+            </div>
+            <h2 className="modal-title">Rate this date</h2>
+            <form onSubmit={handleRatingSubmit}>
+              <div className="form-group">
+                <label>How was it?</label>
+                <div className="type-toggle">
+                  <button type="button" className={`type-btn${ratingForm.good_bad === 'good' ? ' active' : ''}`} onClick={() => setField('good_bad', 'good')}>👍 Good</button>
+                  <button type="button" className={`type-btn${ratingForm.good_bad === 'bad' ? ' active' : ''}`} onClick={() => setField('good_bad', 'bad')}>👎 Bad</button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Romance level</label>
+                <div className="type-toggle">
+                  <button type="button" className={`type-btn${ratingForm.romance_level === 'casual' ? ' active' : ''}`} onClick={() => setField('romance_level', 'casual')}>Casual</button>
+                  <button type="button" className={`type-btn${ratingForm.romance_level === 'romantic' ? ' active' : ''}`} onClick={() => setField('romance_level', 'romantic')}>Romantic</button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Group size</label>
+                <div className="type-toggle">
+                  <button type="button" className={`type-btn${ratingForm.group_size === 'single' ? ' active' : ''}`} onClick={() => setField('group_size', 'single')}>Single</button>
+                  <button type="button" className={`type-btn${ratingForm.group_size === 'double' ? ' active' : ''}`} onClick={() => setField('group_size', 'double')}>Double</button>
+                  <button type="button" className={`type-btn${ratingForm.group_size === 'group' ? ' active' : ''}`} onClick={() => setField('group_size', 'group')}>Group</button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>First date?</label>
+                <div className="type-toggle">
+                  <button type="button" className={`type-btn${ratingForm.first_date === 'yes' ? ' active' : ''}`} onClick={() => setField('first_date', 'yes')}>Yes</button>
+                  <button type="button" className={`type-btn${ratingForm.first_date === 'no' ? ' active' : ''}`} onClick={() => setField('first_date', 'no')}>No</button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="rating-cost">Cost ($)</label>
+                <input
+                  id="rating-cost"
+                  type="number"
+                  min="0"
+                  className="form-control"
+                  placeholder="0"
+                  value={ratingForm.cost}
+                  onChange={e => setField('cost', e.target.value)}
+                />
+              </div>
+              {ratingError && <p className="error">{ratingError}</p>}
+              <button type="submit" className="submit-btn" disabled={submitting}>
+                {submitting ? 'Submitting...' : 'Submit Rating'}
+              </button>
+            </form>
+          </>
+        )}
+
+        {step === 'thanks' && (
+          <>
+            <button className="modal-back-btn" onClick={resetToInfo}>← Back to date</button>
+            <h2 className="modal-title">Thanks for rating! ✨</h2>
+            {stats && (
+              <div className="modal-meta">
+                <div className="meta-item">
+                  <span className="meta-label">Recommend</span>
+                  <span className="meta-value">{Math.round(stats.avgRating ?? 0)}%</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Avg Cost</span>
+                  <span className="meta-value">{stats.avgCost != null ? `$${Math.round(stats.avgCost)}` : '—'}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Total Ratings</span>
+                  <span className="meta-value">{stats.totalRatings}</span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
       </div>
     </div>
   );
@@ -50,17 +401,19 @@ export default function Home() {
   const [filters, setFilters] = useState({ type: [], cost: [] });
   const [sort, setSort] = useState('top_rated');
   const [savedIds, setSavedIds] = useState(new Set());
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  async function fetchDates() {
+    const result = await getDates();
+    if (result.success) {
+      setDates(result.data);
+    } else {
+      setError(result.error);
+    }
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function fetchDates() {
-      const result = await getDates();
-      if (result.success) {
-        setDates(result.data);
-      } else {
-        setError(result.error);
-      }
-      setLoading(false);
-    }
     fetchDates();
   }, []);
 
@@ -137,6 +490,7 @@ export default function Home() {
       <div className="app-right">
         <header className="app-header">
           <span className="app-header-title">Home</span>
+          <button className="header-create-btn" onClick={() => setShowCreateModal(true)}>+ New Date</button>
         </header>
         <div className="app-content">
           <div className="home-main">
@@ -182,6 +536,12 @@ export default function Home() {
           </div>
 
           <DateInfoModal date={selectedDate} onClose={() => setSelectedDate(null)} />
+          {showCreateModal && (
+            <CreateDateModal
+              onClose={() => setShowCreateModal(false)}
+              onCreated={() => { setShowCreateModal(false); fetchDates(); }}
+            />
+          )}
         </div>
       </div>
     </div>
