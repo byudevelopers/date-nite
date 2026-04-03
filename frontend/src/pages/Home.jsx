@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DateCard, { StarRating } from './components/DateCard';
 import SearchBar from './components/SearchBar';
 import Sidebar from './components/Sidebar';
-import { getDates, getFavorites, addFavorite, removeFavorite, createDate } from '../services/api';
+import { getDates, getFavorites, addFavorite, removeFavorite, createDate, createRating, getRatingAverages } from '../services/api';
 
 const ICONS = ['🍕', '🎬', '🏔️', '🎨', '🎳', '🧁', '🎭', '🌿', '🎵', '🏖️', '🍣', '🎮', '🚴', '🌄', '📅'];
 
@@ -147,33 +147,174 @@ const FILTER_SECTIONS = [
   { title: 'Cost', key: 'cost', options: ['Free', 'Under $10', '$10–$25', '$25–$50', '$50+'] },
 ];
 
+const EMPTY_RATING = { good_bad: '', romance_level: '', group_size: '', first_date: '', cost: '' };
+
 function DateInfoModal({ date, onClose }) {
+  const [step, setStep] = useState('info');
+  const [ratingForm, setRatingForm] = useState(EMPTY_RATING);
+  const [stats, setStats] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [ratingError, setRatingError] = useState('');
+
+  useEffect(() => {
+    setStep('info');
+    setRatingForm(EMPTY_RATING);
+    setStats(null);
+    setRatingError('');
+  }, [date?.id]);
+
   if (!date) return null;
+
+  function setField(field, value) {
+    setRatingForm(prev => ({ ...prev, [field]: value }));
+  }
+
+  function resetToInfo() {
+    setStep('info');
+    setRatingForm(EMPTY_RATING);
+    setStats(null);
+    setRatingError('');
+  }
+
+  async function handleRatingSubmit(e) {
+    e.preventDefault();
+    setRatingError('');
+    if (!ratingForm.good_bad || !ratingForm.romance_level || !ratingForm.group_size || !ratingForm.first_date || ratingForm.cost === '') {
+      setRatingError('Please fill in all fields.');
+      return;
+    }
+    setSubmitting(true);
+    const result = await createRating({
+      date_id: date.id,
+      good_bad: ratingForm.good_bad,
+      romance_level: ratingForm.romance_level,
+      group_size: ratingForm.group_size,
+      first_date: ratingForm.first_date === 'yes',
+      cost: Number(ratingForm.cost),
+    });
+    setSubmitting(false);
+    if (result.success) {
+      const statsResult = await getRatingAverages(date.id);
+      if (statsResult.success) setStats(statsResult.data);
+      setStep('thanks');
+    } else {
+      setRatingError(result.error || 'Failed to submit rating.');
+    }
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>✕</button>
-        <div className="modal-type-badge">
-          {date.type === 'venue' ? '📍 Venue' : '🏠 At-home'}
-        </div>
-        <h2 className="modal-title">{date.name}</h2>
-        <StarRating rating={date.avg_rating ?? 0} />
-        <p className="modal-description">{date.description}</p>
-        <div className="modal-meta">
-          <div className="meta-item">
-            <span className="meta-label">Cost</span>
-            <span className="meta-value">{date.avg_cost ? `$${date.avg_cost}` : 'Free'}</span>
-          </div>
-          <div className="meta-item">
-            <span className="meta-label">Group</span>
-            <span className="meta-value">{date.recommended_group ?? '—'}</span>
-          </div>
-          <div className="meta-item">
-            <span className="meta-label">Location</span>
-            <span className="meta-value">{date.location ?? '—'}</span>
-          </div>
-        </div>
-        <p className="modal-placeholder-note">Full reviews & ratings coming soon ✨</p>
+
+        {step === 'info' && (
+          <>
+            <button className="modal-close" onClick={onClose}>✕</button>
+            <div className="modal-type-badge">
+              {date.type === 'venue' ? '📍 Venue' : '🏠 At-home'}
+            </div>
+            <h2 className="modal-title">{date.name}</h2>
+            <StarRating rating={date.avg_rating ?? 0} />
+            <p className="modal-description">{date.description}</p>
+            <div className="modal-meta">
+              <div className="meta-item">
+                <span className="meta-label">Cost</span>
+                <span className="meta-value">{date.avg_cost ? `$${date.avg_cost}` : 'Free'}</span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Group</span>
+                <span className="meta-value">{date.recommended_group ?? '—'}</span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Location</span>
+                <span className="meta-value">{date.location ?? '—'}</span>
+              </div>
+            </div>
+            <button className="submit-btn" onClick={() => setStep('rate')}>
+              Rate this date →
+            </button>
+          </>
+        )}
+
+        {step === 'rate' && (
+          <>
+            <div className="modal-nav-row">
+              <button className="modal-back-btn" onClick={resetToInfo}>← Back</button>
+              <button className="modal-close" onClick={onClose}>✕</button>
+            </div>
+            <h2 className="modal-title">Rate this date</h2>
+            <form onSubmit={handleRatingSubmit}>
+              <div className="form-group">
+                <label>How was it?</label>
+                <div className="type-toggle">
+                  <button type="button" className={`type-btn${ratingForm.good_bad === 'good' ? ' active' : ''}`} onClick={() => setField('good_bad', 'good')}>👍 Good</button>
+                  <button type="button" className={`type-btn${ratingForm.good_bad === 'bad' ? ' active' : ''}`} onClick={() => setField('good_bad', 'bad')}>👎 Bad</button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Romance level</label>
+                <div className="type-toggle">
+                  <button type="button" className={`type-btn${ratingForm.romance_level === 'casual' ? ' active' : ''}`} onClick={() => setField('romance_level', 'casual')}>Casual</button>
+                  <button type="button" className={`type-btn${ratingForm.romance_level === 'romantic' ? ' active' : ''}`} onClick={() => setField('romance_level', 'romantic')}>Romantic</button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Group size</label>
+                <div className="type-toggle">
+                  <button type="button" className={`type-btn${ratingForm.group_size === 'single' ? ' active' : ''}`} onClick={() => setField('group_size', 'single')}>Single</button>
+                  <button type="button" className={`type-btn${ratingForm.group_size === 'double' ? ' active' : ''}`} onClick={() => setField('group_size', 'double')}>Double</button>
+                  <button type="button" className={`type-btn${ratingForm.group_size === 'group' ? ' active' : ''}`} onClick={() => setField('group_size', 'group')}>Group</button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>First date?</label>
+                <div className="type-toggle">
+                  <button type="button" className={`type-btn${ratingForm.first_date === 'yes' ? ' active' : ''}`} onClick={() => setField('first_date', 'yes')}>Yes</button>
+                  <button type="button" className={`type-btn${ratingForm.first_date === 'no' ? ' active' : ''}`} onClick={() => setField('first_date', 'no')}>No</button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="rating-cost">Cost ($)</label>
+                <input
+                  id="rating-cost"
+                  type="number"
+                  min="0"
+                  className="form-control"
+                  placeholder="0"
+                  value={ratingForm.cost}
+                  onChange={e => setField('cost', e.target.value)}
+                />
+              </div>
+              {ratingError && <p className="error">{ratingError}</p>}
+              <button type="submit" className="submit-btn" disabled={submitting}>
+                {submitting ? 'Submitting...' : 'Submit Rating'}
+              </button>
+            </form>
+          </>
+        )}
+
+        {step === 'thanks' && (
+          <>
+            <button className="modal-back-btn" onClick={resetToInfo}>← Back to date</button>
+            <h2 className="modal-title">Thanks for rating! ✨</h2>
+            {stats && (
+              <div className="modal-meta">
+                <div className="meta-item">
+                  <span className="meta-label">Recommend</span>
+                  <span className="meta-value">{Math.round(stats.avgRating ?? 0)}%</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Avg Cost</span>
+                  <span className="meta-value">{stats.avgCost != null ? `$${Math.round(stats.avgCost)}` : '—'}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Total Ratings</span>
+                  <span className="meta-value">{stats.totalRatings}</span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
       </div>
     </div>
   );
