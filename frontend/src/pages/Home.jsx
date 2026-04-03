@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DateCard, { StarRating } from './components/DateCard';
 import SearchBar from './components/SearchBar';
 import Sidebar from './components/Sidebar';
-import { getDates, getFavorites, addFavorite, removeFavorite, createDate, createRating, getRatingAverages } from '../services/api';
+import { getDates, getFavorites, addFavorite, removeFavorite, createDate, createRating, getRatingAverages, searchPlaces } from '../services/api';
 
 const ICONS = ['🍕', '🎬', '🏔️', '🎨', '🎳', '🧁', '🎭', '🌿', '🎵', '🏖️', '🍣', '🎮', '🚴', '🌄', '📅'];
 
@@ -10,7 +10,7 @@ const EMPTY_FORM = {
   name: '',
   type: 'non-venue',
   description: '',
-  location: '',
+  google_place_id: '',
   icon: '📅',
 };
 
@@ -18,23 +18,66 @@ function CreateDateModal({ onClose, onCreated }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [placeSearch, setPlaceSearch] = useState('');
+  const [placeResults, setPlaceResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState(null);
+
+  useEffect(() => {
+    if (form.type !== 'venue' || placeSearch.trim().length < 2) {
+      setPlaceResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      const result = await searchPlaces(placeSearch);
+      setSearching(false);
+      if (result.success) setPlaceResults(result.data.places ?? []);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [placeSearch, form.type]);
 
   function handleChange(e) {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   }
 
+  function selectPlace(place) {
+    setForm(prev => ({ ...prev, name: place.name, google_place_id: place.place_id }));
+    setSelectedPlace(place);
+    setPlaceSearch('');
+    setPlaceResults([]);
+  }
+
+  function clearPlace() {
+    setSelectedPlace(null);
+    setForm(prev => ({ ...prev, name: '', google_place_id: '' }));
+  }
+
+  function switchType(type) {
+    setForm(prev => ({ ...prev, type, name: '', google_place_id: '' }));
+    setSelectedPlace(null);
+    setPlaceSearch('');
+    setPlaceResults([]);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    if (!form.name.trim()) {
+    if (form.type === 'venue' && !form.google_place_id) {
+      setError('Please select a place from the search results.');
+      return;
+    }
+    if (form.type === 'non-venue' && !form.name.trim()) {
       setError('Name is required.');
       return;
     }
     setSubmitting(true);
     const result = await createDate({
-      ...form,
-      avg_cost: form.avg_cost !== '' ? Number(form.avg_cost) : undefined,
+      type: form.type,
+      name: form.name,
+      icon: form.icon,
+      ...(form.type === 'venue' ? { google_place_id: form.google_place_id } : { description: form.description }),
     });
     setSubmitting(false);
     if (result.success) {
@@ -52,62 +95,89 @@ function CreateDateModal({ onClose, onCreated }) {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="cd-name">Name *</label>
-            <input
-              id="cd-name"
-              name="name"
-              className="form-control"
-              placeholder="e.g. Stargazing at Rock Canyon"
-              value={form.name}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="form-group">
             <label>Type *</label>
             <div className="type-toggle">
               <button
                 type="button"
                 className={`type-btn${form.type === 'venue' ? ' active' : ''}`}
-                onClick={() => setForm(prev => ({ ...prev, type: 'venue' }))}
+                onClick={() => switchType('venue')}
               >
                 📍 Venue
               </button>
               <button
                 type="button"
                 className={`type-btn${form.type === 'non-venue' ? ' active' : ''}`}
-                onClick={() => setForm(prev => ({ ...prev, type: 'non-venue' }))}
+                onClick={() => switchType('non-venue')}
               >
                 🏠 At-home
               </button>
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="cd-description">Description</label>
-            <textarea
-              id="cd-description"
-              name="description"
-              className="form-control"
-              placeholder="Describe the date idea..."
-              rows={3}
-              value={form.description}
-              onChange={handleChange}
-            />
-          </div>
-
-          {form.type === 'venue' && (
+          {form.type === 'venue' ? (
             <div className="form-group">
-              <label htmlFor="cd-location">Location</label>
-              <input
-                id="cd-location"
-                name="location"
-                className="form-control"
-                placeholder="e.g. Provo, UT"
-                value={form.location}
-                onChange={handleChange}
-              />
+              <label>Search for a place *</label>
+              {selectedPlace ? (
+                <div className="selected-place">
+                  <span className="selected-place-name">{selectedPlace.name}</span>
+                  <span className="selected-place-address">{selectedPlace.formatted_address}</span>
+                  <button type="button" className="change-place-btn" onClick={clearPlace}>
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    className="form-control"
+                    placeholder="e.g. Dutch Bros Provo"
+                    value={placeSearch}
+                    onChange={e => setPlaceSearch(e.target.value)}
+                  />
+                  {searching && <p className="place-search-status">Searching...</p>}
+                  {placeResults.length > 0 && (
+                    <div className="place-results">
+                      {placeResults.map(place => (
+                        <button
+                          key={place.place_id}
+                          type="button"
+                          className="place-result-item"
+                          onClick={() => selectPlace(place)}
+                        >
+                          <span className="place-result-name">{place.name}</span>
+                          <span className="place-result-address">{place.formatted_address}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
+          ) : (
+            <>
+              <div className="form-group">
+                <label htmlFor="cd-name">Name *</label>
+                <input
+                  id="cd-name"
+                  name="name"
+                  className="form-control"
+                  placeholder="e.g. Stargazing at Rock Canyon"
+                  value={form.name}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="cd-description">Description</label>
+                <textarea
+                  id="cd-description"
+                  name="description"
+                  className="form-control"
+                  placeholder="Describe the date idea..."
+                  rows={3}
+                  value={form.description}
+                  onChange={handleChange}
+                />
+              </div>
+            </>
           )}
 
           <div className="form-group">
@@ -224,10 +294,12 @@ function DateInfoModal({ date, onClose }) {
                 <span className="meta-label">Group</span>
                 <span className="meta-value">{date.recommended_group ?? '—'}</span>
               </div>
-              <div className="meta-item">
-                <span className="meta-label">Location</span>
-                <span className="meta-value">{date.location ?? '—'}</span>
-              </div>
+              {date.type === 'venue' && (
+                <div className="meta-item">
+                  <span className="meta-label">Location</span>
+                  <span className="meta-value">{date.location ?? '—'}</span>
+                </div>
+              )}
             </div>
             <button className="submit-btn" onClick={() => setStep('rate')}>
               Rate this date →
