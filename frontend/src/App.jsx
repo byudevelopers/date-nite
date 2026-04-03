@@ -30,8 +30,8 @@ function App() {
     <Routes>
       <Route path="/" element={<Login />} />
       <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
+      <Route path="/favorites" element={<PrivateRoute><Favorites /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><PageShell title="Profile"><Profile /></PageShell></PrivateRoute>} />
-      <Route path="/favorites" element={<PrivateRoute><PageShell title="Favorites"><Favorites /></PageShell></PrivateRoute>} />
       <Route path="/create-date" element={<PrivateRoute><PageShell title="Create Date"><CreateDate /></PageShell></PrivateRoute>} />
       {import.meta.env.DEV && <Route path="/dev" element={<PageShell title="Dev Tools"><DevTools /></PageShell>} />}
     </Routes>
