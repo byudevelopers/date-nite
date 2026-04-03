@@ -86,6 +86,7 @@ The backend follows a layered architecture separating concerns:
 1. **database.ts** - SQLite database operations using better-sqlite3
    - Exports configured database instance with auto-creation of tables on startup
    - Contains low-level CRUD functions for users, dates, and ratings tables
+   - `DateIdea` interface fields are mostly nullable (`location`, `avg_cost`, `recommended_group`, `avg_rating`, `group_size`, `description`, `google_place_id`)
    - Functions throw errors on failure (no error wrapping here)
    - Important: `createUser()` expects pre-hashed passwords
    - Rating helper functions: `getRatingsByDateId()` for aggregate calculations, `getRecentRatingByUser()` for cooldown checks
@@ -318,14 +319,19 @@ created_at      TEXT NOT NULL     -- ISO 8601 timestamp
 The frontend uses React 19 with React Router DOM and JSX (not TypeScript yet).
 
 **Pages:**
-- `Home` — date discovery with search, filters, sort, and inline "+ New Date" modal
+- `Home` — date discovery with search, filters, sort, inline "+ New Date" modal, and date info modal with 3-step rating flow (info → rate → thank you with stats)
 - `CreateDate` — full-page create date form (also accessible via `/create-date`)
 - `Login` — authentication (register/login)
 - `DevTools` — dev utilities (dev mode only)
 - `Favorites` — placeholder (no UI yet)
 - `Profile` — placeholder (no UI yet)
 
-**Create date form fields:** name, type (venue/non-venue), description, location (venue only), icon picker. `avg_cost` and `recommended_group` are intentionally excluded — they are calculated from user ratings.
+**Create date form fields:** For venue dates, a Google Places search input auto-fills name, description, and location from the API. For non-venue (at-home) dates, manual name and description inputs are shown. Both types include an icon picker. `avg_cost` and `recommended_group` are intentionally excluded — they are calculated from user ratings.
+
+**Date info modal (3-step flow):**
+- Step 1 (info): Date details with a "Rate this date →" button. Location is only shown for venue dates.
+- Step 2 (rate): Rating form with toggles for good/bad, romance level (casual/romantic), group size (single/double/group), first date (yes/no), and a cost input. All fields required.
+- Step 3 (thanks): "Thanks for rating!" with live aggregate stats (% recommend, avg cost, total ratings) and a "Back to date" button. State resets when switching dates or closing.
 
 **Components:** DateCard (date display with StarRating), Sidebar (nav, sort, filters), SearchBar
 
@@ -385,8 +391,6 @@ Backend requires the following environment variables in `backend/.env`:
 **Frontend:**
 - Favorites page is placeholder (empty component, no UI implementation)
 - Profile page is placeholder (empty component, no UI implementation)
-- No rating submission UI: Backend supports ratings but no frontend form exists
-- Home page date info modal shows "Full reviews & ratings coming soon" despite backend supporting rating aggregates
 
 **Integration:**
 - Google Places API requires valid API key in environment variables
@@ -416,9 +420,10 @@ Backend requires the following environment variables in `backend/.env`:
 - Return standardized error codes for auth failures
 
 **Google Places integration patterns:**
+- Both `searchGooglePlaces()` and `fetchGooglePlace()` use the Google Places API v2 (New) at `places.googleapis.com`
 - For venue dates, require `google_place_id` in CreateDateDTO
-- Use `searchGooglePlaces()` to find places before date creation
-- `fetchGooglePlace()` retrieves details for a specific place_id
+- Frontend uses debounced (400ms) place search in the create date modal — user selects from results
+- `fetchGooglePlace()` retrieves details and populates `name`, `description`, and `location` (from `formatted_address`) automatically
 - Handle `PLACES_API_ERROR` (503) when Google API is unavailable
 - Store `google_place_id` in dates table for future reference
 - Icon generation happens automatically via `iconGenerator` utility
