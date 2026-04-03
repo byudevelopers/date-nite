@@ -85,6 +85,27 @@ export default function Home() {
     setFilters({ type: [], cost: [] });
   }
 
+  function matchesCost(date, costFilters) {
+    if (costFilters.length === 0) return true;
+    const cost = date.avg_cost;
+    return costFilters.some(filter => {
+      switch (filter) {
+        case 'Free':
+          return cost == null || cost === 0;
+        case 'Under $10':
+          return cost != null && cost < 10;
+        case '$10–$25':
+          return cost >= 10 && cost <= 25;
+        case '$25–$50':
+          return cost >= 25 && cost <= 50;
+        case '$50+':
+          return cost > 50;
+        default:
+          return false;
+      }
+    });
+  }
+
   async function handleSave(dateId) {
     const isCurrentlySaved = savedIds.has(dateId);
     setSavedIds(prev => {
@@ -109,6 +130,7 @@ export default function Home() {
       const typeMap = { 'Venue': 'venue', 'At-home': 'non-venue' };
       if (!filters.type.some(t => typeMap[t] === d.type)) return false;
     }
+    if (filters.cost.length && !matchesCost(d, filters.cost)) return false;
     return true;
   });
 
