@@ -2,7 +2,145 @@ import React, { useState, useEffect } from 'react';
 import DateCard, { StarRating } from './components/DateCard';
 import SearchBar from './components/SearchBar';
 import Sidebar from './components/Sidebar';
-import { getDates, getFavorites, addFavorite, removeFavorite } from '../services/api';
+import { getDates, getFavorites, addFavorite, removeFavorite, createDate } from '../services/api';
+
+const ICONS = ['🍕', '🎬', '🏔️', '🎨', '🎳', '🧁', '🎭', '🌿', '🎵', '🏖️', '🍣', '🎮', '🚴', '🌄', '📅'];
+
+const EMPTY_FORM = {
+  name: '',
+  type: 'non-venue',
+  description: '',
+  location: '',
+  icon: '📅',
+};
+
+function CreateDateModal({ onClose, onCreated }) {
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    if (!form.name.trim()) {
+      setError('Name is required.');
+      return;
+    }
+    setSubmitting(true);
+    const result = await createDate({
+      ...form,
+      avg_cost: form.avg_cost !== '' ? Number(form.avg_cost) : undefined,
+    });
+    setSubmitting(false);
+    if (result.success) {
+      onCreated();
+    } else {
+      setError(result.error || 'Failed to create date. Is the backend running?');
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card modal-card--create" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2 className="modal-title">Submit a Date Idea</h2>
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="cd-name">Name *</label>
+            <input
+              id="cd-name"
+              name="name"
+              className="form-control"
+              placeholder="e.g. Stargazing at Rock Canyon"
+              value={form.name}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Type *</label>
+            <div className="type-toggle">
+              <button
+                type="button"
+                className={`type-btn${form.type === 'venue' ? ' active' : ''}`}
+                onClick={() => setForm(prev => ({ ...prev, type: 'venue' }))}
+              >
+                📍 Venue
+              </button>
+              <button
+                type="button"
+                className={`type-btn${form.type === 'non-venue' ? ' active' : ''}`}
+                onClick={() => setForm(prev => ({ ...prev, type: 'non-venue' }))}
+              >
+                🏠 At-home
+              </button>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="cd-description">Description</label>
+            <textarea
+              id="cd-description"
+              name="description"
+              className="form-control"
+              placeholder="Describe the date idea..."
+              rows={3}
+              value={form.description}
+              onChange={handleChange}
+            />
+          </div>
+
+          {form.type === 'venue' && (
+            <div className="form-group">
+              <label htmlFor="cd-location">Location</label>
+              <input
+                id="cd-location"
+                name="location"
+                className="form-control"
+                placeholder="e.g. Provo, UT"
+                value={form.location}
+                onChange={handleChange}
+              />
+            </div>
+          )}
+
+          <div className="form-group">
+            <label>Icon</label>
+            <div className="icon-picker">
+              {ICONS.map(icon => (
+                <button
+                  key={icon}
+                  type="button"
+                  className={`icon-btn${form.icon === icon ? ' active' : ''}`}
+                  onClick={() => setForm(prev => ({ ...prev, icon }))}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && <p className="error">{error}</p>}
+
+          <div className="form-actions">
+            <button type="button" className="cancel-btn" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="submit-btn" disabled={submitting}>
+              {submitting ? 'Submitting...' : 'Submit Date'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 const FILTER_SECTIONS = [
   { title: 'Date Type', key: 'type', options: ['Venue', 'At-home'] },
@@ -50,17 +188,19 @@ export default function Home() {
   const [filters, setFilters] = useState({ type: [], cost: [] });
   const [sort, setSort] = useState('top_rated');
   const [savedIds, setSavedIds] = useState(new Set());
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  async function fetchDates() {
+    const result = await getDates();
+    if (result.success) {
+      setDates(result.data);
+    } else {
+      setError(result.error);
+    }
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function fetchDates() {
-      const result = await getDates();
-      if (result.success) {
-        setDates(result.data);
-      } else {
-        setError(result.error);
-      }
-      setLoading(false);
-    }
     fetchDates();
   }, []);
 
@@ -159,6 +299,7 @@ export default function Home() {
       <div className="app-right">
         <header className="app-header">
           <span className="app-header-title">Home</span>
+          <button className="header-create-btn" onClick={() => setShowCreateModal(true)}>+ New Date</button>
         </header>
         <div className="app-content">
           <div className="home-main">
@@ -204,6 +345,12 @@ export default function Home() {
           </div>
 
           <DateInfoModal date={selectedDate} onClose={() => setSelectedDate(null)} />
+          {showCreateModal && (
+            <CreateDateModal
+              onClose={() => setShowCreateModal(false)}
+              onCreated={() => { setShowCreateModal(false); fetchDates(); }}
+            />
+          )}
         </div>
       </div>
     </div>
